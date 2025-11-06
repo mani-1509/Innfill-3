@@ -34,6 +34,7 @@ export interface Profile {
   role: UserRole
   display_name: string | null
   avatar_url: string | null
+  banner_url: string | null
   bio: string | null
   company_name: string | null
   location: string | null

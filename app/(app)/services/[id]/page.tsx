@@ -1,79 +1,214 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getService } from '@/lib/actions/services'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Avatar } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { motion } from 'framer-motion'
 import {
   FiClock,
-  FiStar,
-  FiUser,
   FiCheck,
-  FiArrowLeft,
-  FiImage,
-  FiRefreshCw,
-  FiPackage,
+  FiHeart,
+  FiShare2,
+  FiMessageSquare,
+  FiX,
 } from 'react-icons/fi'
 
-interface ServiceDetailPageProps {
-  params: {
-    id: string
+// Declare Razorpay on window
+declare global {
+  interface Window {
+    Razorpay: any
   }
 }
 
+interface ServiceDetailPageProps {
+  params: Promise<{
+    id: string
+  }>
+}
+
 export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
+  const { id } = use(params)
   const router = useRouter()
   const [service, setService] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [selectedTier, setSelectedTier] = useState<'Standard' | 'Pro' | 'Premium'>('Standard')
+  const [selectedImage, setSelectedImage] = useState<string>('')
+  const [selectedPlan, setSelectedPlan] = useState<string>('Standard')
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [isLiked, setIsLiked] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchService()
-  }, [params.id])
+    loadRazorpay()
+  }, [id])
+
+  const loadRazorpay = () => {
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.onload = () => setRazorpayLoaded(true)
+    document.body.appendChild(script)
+  }
 
   const fetchService = async () => {
     setLoading(true)
     setError(null)
 
-    const result = await getService(params.id)
+    const result = await getService(id)
 
     if (result.error) {
       setError(result.error)
     } else if (result.data) {
       setService(result.data)
+      // Set first image as selected by default
+      if (result.data.thumbnail_url) {
+        setSelectedImage(result.data.thumbnail_url)
+      }
     }
 
     setLoading(false)
   }
 
-  const handleOrderNow = () => {
-    if (!service) return
-    const plan = service.plans.find((p: any) => p.tier === selectedTier)
-    if (plan) {
-      router.push(`/orders/create?service=${service.id}&tier=${selectedTier}`)
+  const toggleLike = () => {
+    setIsLiked(!isLiked)
+    // TODO: Implement like functionality with backend
+  }
+
+  const handleContinue = () => {
+    setShowReviewModal(true)
+  }
+
+  const processPayment = async () => {
+    if (!razorpayLoaded) {
+      setPaymentError('Payment gateway is loading. Please try again.')
+      return
     }
+
+    setIsProcessingPayment(true)
+    setPaymentError(null)
+
+    try {
+      const plan = getSelectedPlanDetails()
+      if (!plan) return
+
+      // TODO: Create order on backend and get order ID
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_dummy',
+        amount: parseFloat(plan.price) * 100, // Amount in paise
+        currency: 'INR',
+        name: 'INNFILL',
+        description: `${service.title} - ${plan.tier} Plan`,
+        image: '/logo.png',
+        handler: function (response: any) {
+          // Payment successful
+          console.log('Payment successful:', response)
+          router.push(`/orders/${response.razorpay_payment_id}`)
+        },
+        prefill: {
+          name: '',
+          email: '',
+          contact: '',
+        },
+        theme: {
+          color: '#3b82f6',
+        },
+      }
+
+      const razorpay = new window.Razorpay(options)
+      razorpay.open()
+    } catch (err: any) {
+      setPaymentError(err.message || 'Payment failed. Please try again.')
+    } finally {
+      setIsProcessingPayment(false)
+    }
+  }
+
+  const getSelectedPlanDetails = () => {
+    return service.plans.find((plan: any) => plan.tier === selectedPlan)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black">
-        <div className="container mx-auto px-4 py-8">
-          <Skeleton className="h-8 w-32 mb-8" />
+      <div className="min-h-screen bg-black text-white p-8">
+        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <Skeleton className="h-96 w-full rounded-lg" />
-              <Skeleton className="h-64 w-full" />
+            {/* Left Column Skeleton */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Main Image Skeleton */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="aspect-video w-full bg-white/10 rounded-2xl animate-pulse"
+              ></motion.div>
+
+              {/* Thumbnail Gallery Skeleton */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="grid grid-cols-4 gap-4"
+              >
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="aspect-video bg-white/10 rounded-lg animate-pulse"
+                  ></div>
+                ))}
+              </motion.div>
+
+              {/* Title Skeleton */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="space-y-4"
+              >
+                <div className="h-10 w-3/4 bg-white/10 rounded-lg animate-pulse"></div>
+                <div className="flex gap-4">
+                  <div className="h-6 w-24 bg-white/10 rounded-full animate-pulse"></div>
+                  <div className="h-6 w-32 bg-white/10 rounded-full animate-pulse"></div>
+                </div>
+              </motion.div>
+
+              {/* Description Skeleton */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="space-y-3"
+              >
+                <div className="h-4 w-full bg-white/10 rounded animate-pulse"></div>
+                <div className="h-4 w-full bg-white/10 rounded animate-pulse"></div>
+                <div className="h-4 w-3/4 bg-white/10 rounded animate-pulse"></div>
+              </motion.div>
             </div>
-            <div className="space-y-6">
-              <Skeleton className="h-96 w-full" />
+
+            {/* Right Column Skeleton - Pricing Card */}
+            <div className="lg:col-span-1">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 space-y-6 sticky top-8"
+              >
+                <div className="h-8 w-32 bg-white/10 rounded-lg animate-pulse"></div>
+                <div className="h-12 w-full bg-white/10 rounded-xl animate-pulse"></div>
+                <div className="space-y-3">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-4 w-full bg-white/10 rounded animate-pulse"
+                    ></div>
+                  ))}
+                </div>
+                <div className="h-14 w-full bg-white/10 rounded-full animate-pulse"></div>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -83,262 +218,326 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
   if (error || !service) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 text-lg mb-4">{error || 'Service not found'}</p>
-          <Button onClick={() => router.push('/services')} variant="outline">
-            Back to Services
-          </Button>
-        </div>
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <p className="text-red-400 mb-4">{error || "Service not found"}</p>
+        <Link
+          href="/services"
+          className="px-4 py-2 bg-white text-black font-semibold rounded-lg"
+        >
+          Back to Services
+        </Link>
       </div>
     )
   }
 
-  const images = [service.thumbnail_url, ...(service.portfolio_urls || [])].filter(Boolean)
-
   return (
-    <div className="min-h-screen bg-black">
-      <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <Button
-          onClick={() => router.back()}
-          variant="ghost"
-          className="mb-6 text-gray-400 hover:text-white"
-        >
-          <FiArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Service Details */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left Column - Images and Description */}
+          <div className="lg:col-span-2 space-y-8">
             {/* Image Gallery */}
-            <Card className="bg-gray-900/80 border-gray-700 overflow-hidden">
-              {images.length > 0 ? (
-                <>
-                  <div className="relative aspect-video bg-gradient-to-br from-blue-600/20 to-purple-600/20">
+            <div className="space-y-4">
+              <div className="aspect-video w-full rounded-2xl overflow-hidden bg-white/10">
+                <img
+                  src={selectedImage || (service.images && service.images[0]) || '/placeholder.jpg'}
+                  alt={service.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                {(service.images || []).map(
+                  (image: string, index: number) => (
+                    <motion.button
+                      key={index}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedImage(image)}
+                      className={`aspect-video rounded-lg overflow-hidden border-2 ${
+                        selectedImage === image
+                          ? "border-white"
+                          : "border-transparent"
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </motion.button>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Service Description */}
+            <div className="modern-card p-6 space-y-6">
+              <h1 className="text-3xl font-bold">{service.title}</h1>
+              <div className="flex items-center gap-4 text-gray-400">
+                <span className="flex items-center gap-1">
+                  <FiClock className="w-4 h-4" />
+                  {getSelectedPlanDetails()?.delivery_time_days} days delivery
+                </span>
+                <span>•</span>
+                <span>{service.category}</span>
+              </div>
+              <p className="text-gray-300 whitespace-pre-wrap">
+                {service.description}
+              </p>
+            </div>
+
+            {/* Freelancer Profile */}
+            <div className="modern-card p-6">
+              <div className="flex items-start gap-4">
+                <Link href={`/profile/${service.freelancer?.username || ''}`}>
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-white/10">
                     <img
-                      src={images[selectedImage]}
-                      alt={service.title}
+                      src={service.freelancer?.avatar_url || '/avatar-placeholder.png'}
+                      alt={service.freelancer?.username || 'Freelancer'}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  {images.length > 1 && (
-                    <div className="flex gap-2 p-4 overflow-x-auto">
-                      {images.map((img, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedImage(idx)}
-                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                            selectedImage === idx
-                              ? 'border-blue-500'
-                              : 'border-gray-700 hover:border-gray-600'
-                          }`}
-                        >
-                          <img
-                            src={img}
-                            alt={`${service.title} ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="aspect-video bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
-                  <FiImage className="w-24 h-24 text-gray-600" />
-                </div>
-              )}
-            </Card>
-
-            {/* Service Info */}
-            <Card className="bg-gray-900/80 border-gray-700 p-6">
-              <div className="mb-4">
-                <Badge className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">
-                  {service.category}
-                </Badge>
-              </div>
-
-              <h1 className="text-3xl font-bold text-white mb-4">{service.title}</h1>
-
-              {/* Freelancer Info */}
-              <Link
-                href={`/profile/${service.freelancer?.username}`}
-                className="flex items-center gap-3 mb-6 hover:bg-gray-800/50 p-3 rounded-lg transition-colors"
-              >
-                <Avatar className="w-12 h-12">
-                  {service.freelancer?.avatar_url ? (
-                    <img src={service.freelancer.avatar_url} alt={service.freelancer.display_name} />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                      <FiUser className="w-6 h-6 text-white" />
-                    </div>
-                  )}
-                </Avatar>
-                <div>
-                  <p className="text-white font-medium">{service.freelancer?.display_name}</p>
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    {service.freelancer?.rating > 0 && (
-                      <>
-                        <FiStar className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span>{service.freelancer.rating.toFixed(1)}</span>
-                        <span>•</span>
-                      </>
+                </Link>
+                <div className="flex-1">
+                  <Link
+                    href={`/profile/${service.freelancer?.username || ''}`}
+                    className="text-xl font-semibold hover:text-gray-300 transition-colors"
+                  >
+                    @{service.freelancer?.username || 'Unknown'}
+                  </Link>
+                  <div className="flex items-center gap-2 text-gray-400 mb-2">
+                    <span>{service.category}</span>
+                  </div>
+                  <p className="text-gray-300">{service.freelancer?.bio || 'No bio available'}</p>
+                  <div className="flex gap-2 mt-4">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 bg-white text-black font-semibold rounded-lg"
+                    >
+                      Contact Me
+                    </motion.button>
+                    {userRole === 'client' && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={toggleLike}
+                        className={`p-2 border rounded-lg transition-colors ${
+                          isLiked 
+                            ? 'border-red-500/50 bg-red-500/20 text-red-400 hover:bg-red-500/30' 
+                            : 'border-white/20 text-white hover:bg-white/10'
+                        }`}
+                        title={isLiked ? 'Unlike service' : 'Like service'}
+                      >
+                        <FiHeart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                      </motion.button>
                     )}
-                    <span>{service.freelancer?.total_orders || 0} orders</span>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-2 border border-white/20 text-white rounded-lg hover:bg-white/10"
+                    >
+                      <FiShare2 className="w-5 h-5" />
+                    </motion.button>
                   </div>
                 </div>
-              </Link>
-
-              <div className="prose prose-invert max-w-none">
-                <h3 className="text-xl font-semibold text-white mb-3">About this service</h3>
-                <p className="text-gray-300 whitespace-pre-wrap">{service.description}</p>
               </div>
-            </Card>
-
-            {/* Plan Comparison */}
-            <Card className="bg-gray-900/80 border-gray-700 p-6">
-              <h2 className="text-2xl font-bold text-white mb-6">Compare Plans</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {service.plans.map((plan: any) => (
-                  <motion.div
-                    key={plan.tier}
-                    whileHover={{ scale: 1.02 }}
-                    className={`p-6 rounded-lg border-2 transition-colors cursor-pointer ${
-                      selectedTier === plan.tier
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : 'border-gray-700 hover:border-gray-600'
-                    }`}
-                    onClick={() => setSelectedTier(plan.tier)}
-                  >
-                    <h3 className="text-lg font-bold text-white mb-2">{plan.tier}</h3>
-                    <p className="text-3xl font-bold text-white mb-1">₹{plan.price}</p>
-                    <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
-
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center gap-2 text-gray-300 text-sm">
-                        <FiClock className="w-4 h-4 text-blue-400" />
-                        <span>{plan.delivery_time_days} days delivery</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-300 text-sm">
-                        <FiRefreshCw className="w-4 h-4 text-blue-400" />
-                        <span>
-                          {plan.revisions_included === 0
-                            ? 'No revisions'
-                            : plan.revisions_included === -1
-                            ? 'Unlimited revisions'
-                            : `${plan.revisions_included} revisions`}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-gray-700 pt-4 mb-4">
-                      <p className="text-sm font-semibold text-gray-200 mb-2 flex items-center gap-2">
-                        <FiPackage className="w-4 h-4" />
-                        What's included:
-                      </p>
-                      <ul className="space-y-2">
-                        {plan.deliverables.map((item: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
-                            <FiCheck className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </Card>
+            </div>
           </div>
 
-          {/* Right Column - Order Card */}
+          {/* Right Column - Pricing Plans */}
           <div className="lg:col-span-1">
-            <div className="sticky top-8 space-y-4">
-              <Card className="bg-gray-900/80 border-gray-700 p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Order Now</h3>
+            <div className="sticky top-8 modern-card p-6 space-y-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
+              {/* Plan Selector */}
+              <div className="grid grid-cols-3 gap-2">
+                {["Standard", "Pro", "Premium"].map((tier) => (
+                  <motion.button
+                    key={tier}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedPlan(tier)}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                      selectedPlan === tier
+                        ? "bg-white text-black"
+                        : "bg-white/10 text-white hover:bg-white/20"
+                    }`}
+                  >
+                    {tier}
+                  </motion.button>
+                ))}
+              </div>
 
-                {/* Tier Selector */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-200 mb-2">
-                    Select Plan
-                  </label>
-                  <div className="space-y-2">
-                    {service.plans.map((plan: any) => (
-                      <button
-                        key={plan.tier}
-                        onClick={() => setSelectedTier(plan.tier)}
-                        className={`w-full p-3 rounded-lg border-2 transition-colors text-left ${
-                          selectedTier === plan.tier
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-gray-700 hover:border-gray-600'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-white">{plan.tier}</span>
-                          <span className="text-lg font-bold text-white">₹{plan.price}</span>
-                        </div>
-                        <p className="text-gray-400 text-sm mt-1">{plan.delivery_time_days} days</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Selected Plan Details */}
-                {(() => {
-                  const plan = service.plans.find((p: any) => p.tier === selectedTier)
-                  return plan ? (
-                    <div className="mb-6 p-4 bg-gray-800/50 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-gray-300">Price</span>
-                        <span className="text-2xl font-bold text-white">₹{plan.price}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">Delivery Time</span>
-                        <span className="text-gray-300">{plan.delivery_time_days} days</span>
-                      </div>
+              {/* Selected Plan Details */}
+              {getSelectedPlanDetails() && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-bold">
+                      ₹{getSelectedPlanDetails()?.price}
+                    </h3>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <FiClock className="w-4 h-4" />
+                      {getSelectedPlanDetails()?.delivery_time_days} days
                     </div>
-                  ) : null
-                })()}
-
-                <Button
-                  onClick={handleOrderNow}
-                  className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-lg font-semibold"
-                >
-                  Order Now (₹{service.plans.find((p: any) => p.tier === selectedTier)?.price})
-                </Button>
-
-                <p className="text-center text-gray-400 text-sm mt-4">
-                  You won't be charged yet
-                </p>
-              </Card>
-
-              {/* Additional Info */}
-              <Card className="bg-gray-900/80 border-gray-700 p-6">
-                <h4 className="font-semibold text-white mb-4">Service Details</h4>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Category</span>
-                    <span className="text-gray-200">{service.category}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Total Orders</span>
-                    <span className="text-gray-200">{service.total_orders || 0}</span>
+
+                  <p className="text-gray-300">
+                    {getSelectedPlanDetails()?.description}
+                  </p>
+
+                  <div className="space-y-3">
+                    {getSelectedPlanDetails()?.deliverables?.map(
+                      (deliverable: string, index: number) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-2 text-gray-300"
+                        >
+                          <FiCheck className="w-5 h-5 text-green-400 shrink-0" />
+                          <span>{deliverable}</span>
+                        </div>
+                      )
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Listed</span>
-                    <span className="text-gray-200">
-                      {new Date(service.created_at).toLocaleDateString()}
-                    </span>
+                  <div className="pt-4 border-t border-white/10">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleContinue}
+                      className="w-full py-3 bg-white text-black font-semibold rounded-lg hover:shadow-lg hover:shadow-white/20 transition-all duration-300"
+                    >
+                      Continue (₹{getSelectedPlanDetails()?.price})
+                    </motion.button>
+                  </div>
+
+                  <div className="text-center text-sm text-gray-400">
+                    {getSelectedPlanDetails()?.revisions_included} revisions
+                    included
                   </div>
                 </div>
-              </Card>
+              )}
+
+              {/* Contact Section */}
+              <div className="pt-6 border-t border-white/10">
+                <h4 className="font-semibold mb-4">Need help?</h4>
+                <div className="space-y-2">
+                  <button className="w-full py-2 px-4 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2">
+                    <FiMessageSquare className="w-5 h-5" />
+                    Message Seller
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-gray-900 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Review Your Order</h2>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            {service && getSelectedPlanDetails() && (
+              <div className="space-y-6">
+                {/* Service Summary */}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10">
+                      <img
+                        src={(service.images && service.images[0]) || '/placeholder.jpg'}
+                        alt={service.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{service.title}</h3>
+                      <p className="text-gray-400 text-sm">{service.category}</p>
+                      <p className="text-gray-400 text-sm">by @{service.freelancer?.username}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">{getSelectedPlanDetails()?.tier} Plan</span>
+                      <span className="text-green-400 font-bold">₹{getSelectedPlanDetails()?.price}</span>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <FiClock className="w-4 h-4" />
+                        {getSelectedPlanDetails()?.delivery_time_days} days delivery
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <FiCheck className="w-4 h-4" />
+                        {getSelectedPlanDetails()?.revisions_included} revisions included
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Deliverables */}
+                <div>
+                  <h4 className="font-semibold mb-3">What you'll get:</h4>
+                  <div className="space-y-2">
+                    {getSelectedPlanDetails()?.deliverables?.map((deliverable: string, index: number) => (
+                      <div key={index} className="flex items-start gap-2 text-sm">
+                        <FiCheck className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                        <span>{deliverable}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Payment Error */}
+                {paymentError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    <p className="text-red-400 text-sm mb-2">{paymentError}</p>
+                    <button
+                      onClick={() => {
+                        setPaymentError(null)
+                        processPayment()
+                      }}
+                      className="text-red-400 hover:text-red-300 text-sm underline"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="flex-1 py-3 px-4 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={processPayment}
+                    disabled={isProcessingPayment || !razorpayLoaded}
+                    className="flex-1 py-3 px-4 bg-white text-black font-semibold rounded-lg hover:shadow-lg hover:shadow-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessingPayment ? 'Processing...' : 
+                     !razorpayLoaded ? 'Loading Payment...' : 
+                     `Pay ₹{getSelectedPlanDetails()?.price}`}
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

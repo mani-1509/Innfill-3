@@ -6,10 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth'
 import { forgotPassword } from '@/lib/actions/auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -41,27 +37,22 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black p-4 relative">
-        {/* Video Background */}
-        <div className="fixed inset-0 z-0">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-20"
-          >
-            <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black"></div>
-        </div>
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">
+              <span className="text-white">INN</span>
+              <span className="text-blue-500">FILL</span>
+            </h1>
+          </div>
 
-        <Card className="w-full max-w-md relative z-10 bg-gray-900/80 border-gray-800 backdrop-blur-xl text-white">
-          <CardHeader className="space-y-1">
-            <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-full bg-green-900/50 border border-green-700 flex items-center justify-center">
+          {/* Success Card */}
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <div className="flex justify-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
                 <svg
-                  className="h-6 w-6 text-green-400"
+                  className="h-8 w-8 text-green-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -75,98 +66,91 @@ export default function ForgotPasswordPage() {
                 </svg>
               </div>
             </div>
-            <CardTitle className="text-2xl text-center text-white">Check your email</CardTitle>
-            <CardDescription className="text-center text-gray-400">
+
+            <h2 className="text-2xl font-bold text-white text-center mb-3">Check your email</h2>
+            <p className="text-gray-400 text-center mb-6">
               We've sent you a password reset link. Please check your email and follow the
               instructions to reset your password.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-950/50 border border-blue-900 text-blue-400 px-4 py-3 rounded-lg text-sm">
+            </p>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-4 py-3 rounded-lg text-sm mb-6">
               <p className="font-semibold mb-1">⏰ Important:</p>
               <p>The reset link expires in 1 hour. Please reset your password soon.</p>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Link href="/login" className="w-full">
-              <Button className="w-full bg-gray-800 border-gray-700 hover:bg-gray-700 text-white" variant="outline">
+
+            <Link href="/login" className="block">
+              <button className="w-full py-3 px-4 bg-white/5 border border-white/10 text-white rounded-lg font-semibold hover:bg-white/10 transition-all duration-300">
                 Back to login
-              </Button>
+              </button>
             </Link>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4 relative">
-      {/* Video Background */}
-      <div className="fixed inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-20"
-        >
-          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black"></div>
-      </div>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2">
+            <span className="text-white">INN</span>
+            <span className="text-blue-500">FILL</span>
+          </h1>
+          <p className="text-gray-400">Reset your password</p>
+        </div>
 
-      <Card className="w-full max-w-md relative z-10 bg-gray-900/80 border-gray-800 backdrop-blur-xl text-white">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <div className="text-3xl font-bold">
-              <span className="text-white">INN</span>
-              <span className="text-blue-500">FILL</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl text-center text-white">Forgot password?</CardTitle>
-          <CardDescription className="text-center text-gray-400">
+        {/* Form Card */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-2 text-center">Forgot password?</h2>
+          <p className="text-gray-400 text-center mb-6 text-sm">
             Enter your email address and we'll send you a link to reset your password
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {error && (
-              <div className="bg-red-950/50 border border-red-900 text-red-400 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email</Label>
-              <Input
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address
+              </label>
+              <input
                 id="email"
                 type="email"
                 placeholder="name@example.com"
                 {...register('email')}
                 disabled={isLoading}
-                className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
               />
               {errors.email && (
-                <p className="text-sm text-red-400">{errors.email.message}</p>
+                <p className="text-sm text-red-400 mt-1">{errors.email.message}</p>
               )}
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button
+
+            <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
+              className="w-full py-3 px-4 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-white/20"
             >
               {isLoading ? 'Sending...' : 'Send reset link'}
-            </Button>
-            <Link href="/login" className="w-full">
-              <Button variant="outline" className="w-full bg-gray-800 border-gray-700 hover:bg-gray-700 text-white" type="button">
+            </button>
+
+            <Link href="/login" className="block">
+              <button
+                type="button"
+                className="w-full py-3 px-4 bg-white/5 border border-white/10 text-white rounded-lg font-semibold hover:bg-white/10 transition-all duration-300"
+              >
                 Back to login
-              </Button>
+              </button>
             </Link>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }

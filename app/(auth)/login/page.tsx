@@ -7,16 +7,13 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { login } from '@/lib/actions/auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -24,6 +21,8 @@ export default function LoginPage() {
       setSuccessMessage('Password reset successful! You can now sign in with your new password.')
     } else if (searchParams.get('registered') === 'true') {
       setSuccessMessage('Registration successful! Please sign in to continue.')
+    } else if (searchParams.get('confirm_email') === 'true') {
+      setSuccessMessage('Registration successful! Please check your email and click the confirmation link to activate your account.')
     }
   }, [searchParams])
 
@@ -40,7 +39,7 @@ export default function LoginPage() {
     setError(null)
     setSuccessMessage(null)
 
-    const result = await login(data.email, data.password)
+    const result = await login(data.email, data.password, rememberMe)
 
     if (result?.error) {
       setError(result.error)
@@ -49,86 +48,76 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4 relative">
-      {/* Video Background */}
-      <div className="fixed inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-20"
-        >
-          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black"></div>
-      </div>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2">
+            <span className="text-white">INN</span>
+            <span className="text-blue-500">FILL</span>
+          </h1>
+          <p className="text-gray-400">Welcome back to your workspace</p>
+        </div>
 
-      <Card className="w-full max-w-md relative z-10 bg-gray-900/80 border-gray-800 backdrop-blur-xl text-white">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <div className="text-3xl font-bold">
-              <span className="text-white">INN</span>
-              <span className="text-blue-500">FILL</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl text-center text-white">Welcome back</CardTitle>
-          <CardDescription className="text-center text-gray-400">
-            Enter your credentials to access your account
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+        {/* Login Card */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-6">Sign In</h2>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {successMessage && (
-              <div className="bg-green-950/50 border border-green-900 text-green-400 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-3 rounded-lg text-sm">
                 {successMessage}
               </div>
             )}
             
             {error && (
-              <div className="bg-red-950/50 border border-red-900 text-red-400 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email</Label>
-              <Input
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address
+              </label>
+              <input
                 id="email"
                 type="email"
                 placeholder="name@example.com"
                 {...register('email')}
                 disabled={isLoading}
-                className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
               />
               {errors.email && (
-                <p className="text-sm text-red-400">{errors.email.message}</p>
+                <p className="text-sm text-red-400 mt-1">{errors.email.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-gray-300">Password</Label>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                  Password
+                </label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-blue-400 hover:underline"
+                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  Forgot password?
+                  Forgot?
                 </Link>
               </div>
               <div className="relative">
-                <Input
+                <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   {...register('password')}
                   disabled={isLoading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 pr-10"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,27 +132,43 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-red-400">{errors.password.message}</p>
+                <p className="text-sm text-red-400 mt-1">{errors.password.message}</p>
               )}
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </Button>
-            <div className="text-sm text-center text-gray-400">
-              Don't have an account?{' '}
-              <Link href="/register" className="text-blue-400 hover:underline font-medium">
-                Sign up
-              </Link>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 bg-white/5 border-white/10 rounded text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-black cursor-pointer"
+              />
+              <label htmlFor="remember-me" className="ml-2 text-sm text-gray-300 cursor-pointer select-none">
+                Remember me for 7 days
+              </label>
             </div>
-          </CardFooter>
-        </form>
-      </Card>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-4 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-white/20"
+            >
+              {isLoading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-400 text-sm">
+              Don't have an account?{' '}
+              <Link href="/register" className="text-white font-semibold hover:text-gray-300 transition-colors">
+                Sign Up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

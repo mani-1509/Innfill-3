@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
-export async function login(email: string, password: string) {
-  const supabase = await createClient()
+export async function login(email: string, password: string, rememberMe: boolean = false) {
+  const supabase = await createClient(rememberMe)
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -57,6 +57,9 @@ export async function signup(
     return { error: authError.message }
   }
 
+  // Check if email confirmation is required
+  const needsEmailConfirmation = authData.user && !authData.session
+
   // Create profile
   if (authData.user) {
     const { error: profileError } = await supabase
@@ -75,7 +78,13 @@ export async function signup(
   }
 
   revalidatePath('/', 'layout')
-  redirect('/login?registered=true')
+  
+  // Redirect with appropriate message
+  if (needsEmailConfirmation) {
+    redirect('/login?confirm_email=true')
+  } else {
+    redirect('/login?registered=true')
+  }
 }
 
 export async function logout() {

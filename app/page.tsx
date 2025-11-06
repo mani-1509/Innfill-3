@@ -1,27 +1,31 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white relative">
       {/* Video Background */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed top-0 left-0 w-full h-full z-0 overflow-hidden">
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="w-full h-full object-cover opacity-40"
+          className="w-full h-full object-cover object-center block opacity-40"
+          style={{ filter: 'brightness(1) contrast(1) grayscale(1)' }}
         >
           <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black"></div>
+        {/* Radial gradient overlay */}
+        <div 
+          className="absolute top-0 left-0 w-full h-full z-1"
+          style={{
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0) 0%, rgba(8, 9, 10, 0.855) 100%)'
+          }}
+        ></div>
       </div>
 
       {/* Content */}
-      <div className="relative z-10">
+      <div className="relative z-10">{/* Navigation */}
         {/* Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-50 mx-2.5 mt-2.5 bg-black/50 backdrop-blur-md border border-white/20 rounded-full">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,17 +49,14 @@ export default function Home() {
               {/* Desktop Actions */}
               <div className="hidden md:flex items-center gap-4">
                 <Link href="/login">
-                  <Button 
-                    variant="ghost" 
-                    className="bg-gradient-to-b from-gray-900 to-white/10 text-white hover:bg-white/20 border border-white/30 shadow-inner"
-                  >
+                  <button className="px-6 py-2 bg-white/5 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all">
                     Sign In
-                  </Button>
+                  </button>
                 </Link>
                 <Link href="/register">
-                  <Button className="bg-gradient-to-b from-white to-white/90 text-black hover:from-gray-100 hover:to-white shadow-inner">
+                  <button className="px-6 py-2 bg-white text-black rounded-lg hover:bg-gray-200 transition-all font-semibold">
                     Start Now
-                  </Button>
+                  </button>
                 </Link>
               </div>
 
@@ -72,9 +73,9 @@ export default function Home() {
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-20 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-6 bg-blue-500/20 text-blue-300 border-blue-500/30">
+            <div className="inline-block mb-6 px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-sm font-semibold">
               ⭐ NEW GEN AI FREELANCING PLATFORM
-            </Badge>
+            </div>
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Freelancing<br />Automated
             </h1>
@@ -84,35 +85,33 @@ export default function Home() {
 
             {/* Waitlist Card */}
             <div className="max-w-xl mx-auto">
-              <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-xl hover:border-blue-500/30 transition-all">
-                <CardContent className="p-8">
-                  <Link href="/register">
-                    <Button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white py-6 text-base font-semibold">
-                      <svg
-                        className="w-5 h-5 mr-2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                      JOIN THE WAITING LIST
-                    </Button>
-                  </Link>
-                  <div className="text-center">
-                    <div className="text-5xl font-bold text-blue-400 mb-2">112</div>
-                    <div className="text-sm text-gray-400 uppercase tracking-wider">USERS SIGNED UP</div>
-                  </div>
-                  <p className="text-gray-400 text-sm mt-6 text-center">
-                    Be part of the growing community of freelancers and clients
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:border-blue-500/30 transition-all">
+                <Link href="/register">
+                  <button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-lg text-base font-semibold transition-all flex items-center justify-center gap-2">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                    JOIN THE WAITING LIST
+                  </button>
+                </Link>
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-blue-400 mb-2">112</div>
+                  <div className="text-sm text-gray-400 uppercase tracking-wider">USERS SIGNED UP</div>
+                </div>
+                <p className="text-gray-400 text-sm mt-6 text-center">
+                  Be part of the growing community of freelancers and clients
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -126,9 +125,9 @@ export default function Home() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {/* Smart Opportunity Discovery */}
-            <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-xl hover:bg-gray-900/70 transition">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
                     className="w-8 h-8 text-white"
                     fill="none"
@@ -143,19 +142,17 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-white">Smart Opportunity Discovery</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm text-center">
+                <h3 className="text-white font-semibold text-lg mb-3">Smart Opportunity Discovery</h3>
+                <p className="text-gray-400 text-sm">
                   AI finds perfect projects based on your skills and goals
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Personalized Matching */}
-            <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-xl hover:bg-gray-900/70 transition">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
                     className="w-8 h-8 text-white"
                     fill="none"
@@ -170,19 +167,17 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-white">Personalized Matching</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm text-center">
+                <h3 className="text-white font-semibold text-lg mb-3">Personalized Matching</h3>
+                <p className="text-gray-400 text-sm">
                   Craft compelling proposals that convert using AI insights
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Auto-Negotiation */}
-            <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-xl hover:bg-gray-900/70 transition">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
                     className="w-8 h-8 text-white"
                     fill="none"
@@ -197,19 +192,17 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-white">Auto-Negotiation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm text-center">
+                <h3 className="text-white font-semibold text-lg mb-3">Auto-Negotiation</h3>
+                <p className="text-gray-400 text-sm">
                   Handle responses and negotiate deals automatically
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Performance Analytics */}
-            <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-xl hover:bg-gray-900/70 transition">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
                     className="w-8 h-8 text-white"
                     fill="none"
@@ -224,14 +217,12 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <CardTitle className="text-white">Performance Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-400 text-sm text-center">
+                <h3 className="text-white font-semibold text-lg mb-3">Performance Analytics</h3>
+                <p className="text-gray-400 text-sm">
                   Track success rates and optimize your freelancing
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -243,9 +234,9 @@ export default function Home() {
               Join thousands of freelancers already waiting for early access
             </p>
             <Link href="/register">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-200 px-8 py-6 text-lg">
+              <button className="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-lg text-lg font-semibold transition-all hover:shadow-lg hover:shadow-white/20">
                 Start Now
-              </Button>
+              </button>
             </Link>
           </div>
         </section>

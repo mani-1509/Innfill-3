@@ -3,9 +3,6 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Event, EventType } from '@/types/database'
-import { Card } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 
 const eventTypeColors: Record<EventType, string> = {
   announcement: 'bg-blue-500',
@@ -81,21 +78,43 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen bg-black">
       {/* Video Background */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed top-0 left-0 w-full h-full z-0 overflow-hidden">
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-30"
+          className="w-full h-full object-cover object-center block opacity-40"
+          style={{ filter: 'brightness(1) contrast(1) grayscale(1)' }}
         >
           <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
         </video>
+        {/* Radial gradient overlay */}
+        <div 
+          className="absolute top-0 left-0 z-1 w-full h-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(255, 255, 255, 0) 0%, rgba(8, 9, 10, 0.855) 100%)'
+          }}
+        ></div>
       </div>
+
+      
+      {/* <div className="fixed inset-0 z-0">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/80"></div>
+      </div> */}
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto">{/* Header */}
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">
@@ -108,26 +127,28 @@ export default function EventsPage() {
 
           {/* Filter Buttons */}
           <div className="flex flex-wrap gap-2 mb-6">
-            <Button
+            <button
               onClick={() => setSelectedType('all')}
-              variant={selectedType === 'all' ? 'default' : 'outline'}
-              className={selectedType === 'all' ? 'bg-blue-600 hover:bg-blue-700' : 'border-gray-700 text-gray-300 hover:bg-gray-800'}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                selectedType === 'all'
+                  ? 'bg-white text-black'
+                  : 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10'
+              }`}
             >
               All
-            </Button>
+            </button>
             {Object.entries(eventTypeLabels).map(([type, label]) => (
-              <Button
+              <button
                 key={type}
                 onClick={() => setSelectedType(type as EventType)}
-                variant={selectedType === type ? 'default' : 'outline'}
-                className={
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   selectedType === type
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'border-gray-700 text-gray-300 hover:bg-gray-800'
-                }
+                    ? 'bg-white text-black'
+                    : 'bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10'
+                }`}
               >
                 {label}
-              </Button>
+              </button>
             ))}
           </div>
 
@@ -135,31 +156,35 @@ export default function EventsPage() {
           {loading ? (
             <div className="space-y-6">
               {[...Array(3)].map((_, i) => (
-                <Card key={i} className="bg-gray-900/80 border-gray-800 p-6">
+                <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 animate-pulse">
                   <div className="flex items-center justify-between mb-4">
-                    <Skeleton className="h-6 w-28" />
-                    <Skeleton className="h-4 w-24" />
+                    <div className="h-6 w-28 bg-white/10 rounded-full"></div>
+                    <div className="h-4 w-24 bg-white/10 rounded"></div>
                   </div>
-                  <Skeleton className="h-8 w-3/4 mb-4" />
-                  <Skeleton className="h-40 w-full mb-4" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-5/6" />
-                </Card>
+                  <div className="h-8 w-3/4 bg-white/10 rounded mb-4"></div>
+                  <div className="h-40 w-full bg-white/10 rounded-lg mb-4"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-full bg-white/10 rounded"></div>
+                    <div className="h-4 w-5/6 bg-white/10 rounded"></div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : filteredEvents.length === 0 ? (
-            <Card className="bg-gray-900/80 border-gray-800 p-12 text-center">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <p className="text-gray-400 text-lg">
                 No events found. Check back later for updates!
               </p>
-            </Card>
+            </div>
           ) : (
             <div className="space-y-6">
               {filteredEvents.map((event) => (
-                <Card
+                <div
                   key={event.id}
-                  className={`bg-gray-900/80 border-gray-800 p-6 transition-all hover:border-gray-700 ${
-                    event.is_pinned ? 'border-blue-500 border-l-4' : ''
+                  className={`bg-white/5 backdrop-blur-sm border rounded-2xl p-6 transition-all hover:bg-white/[0.07] ${
+                    event.is_pinned 
+                      ? 'border-blue-500 border-l-4' 
+                      : 'border-white/10 hover:border-white/20'
                   }`}
                 >
                   {/* Event Header */}
@@ -173,7 +198,7 @@ export default function EventsPage() {
                         {eventTypeLabels[event.type]}
                       </span>
                       {event.is_pinned && (
-                        <span className="text-blue-500 text-xs font-semibold flex items-center gap-1">
+                        <span className="text-blue-400 text-xs font-semibold flex items-center gap-1">
                           <svg
                             className="w-4 h-4"
                             fill="currentColor"
@@ -197,7 +222,7 @@ export default function EventsPage() {
 
                   {/* Event Image */}
                   {event.image_url && (
-                    <div className="mb-4 rounded-lg overflow-hidden">
+                    <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
                       <img
                         src={event.image_url}
                         alt={event.title}
@@ -210,7 +235,7 @@ export default function EventsPage() {
                   <div className="text-gray-300 whitespace-pre-wrap leading-relaxed">
                     {event.content}
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}

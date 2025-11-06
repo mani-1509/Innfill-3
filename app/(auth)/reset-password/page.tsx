@@ -3,14 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth'
-import { resetPassword } from '@/lib/actions/auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -18,7 +14,10 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [linkError, setLinkError] = useState<string | null>(null)
+  const [isSessionReady, setIsSessionReady] = useState(false)
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
     // Check for error parameters from Supabase
@@ -27,12 +26,24 @@ export default function ResetPasswordPage() {
     
     if (errorCode === 'otp_expired') {
       setLinkError('This password reset link has expired. Please request a new one.')
+      return
     } else if (errorCode === 'access_denied') {
       setLinkError('This password reset link is invalid. Please request a new one.')
+      return
     } else if (errorDescription) {
       setLinkError(errorDescription)
+      return
     }
-  }, [searchParams])
+
+    // Check if user has a valid session (from the recovery link)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsSessionReady(true)
+      } else {
+        setLinkError('This password reset link is invalid or has expired. Please request a new one.')
+      }
+    })
+  }, [searchParams, supabase.auth])
 
   const {
     register,
@@ -43,7 +54,7 @@ export default function ResetPasswordPage() {
   })
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    if (linkError) {
+    if (linkError || !isSessionReady) {
       setError('Please request a new password reset link.')
       return
     }
@@ -51,120 +62,120 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
     setError(null)
 
-    const result = await resetPassword(data.password)
+    try {
+      // Use client-side Supabase to update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: data.password,
+      })
 
-    if (result?.error) {
-      setError(result.error)
+      if (updateError) {
+        setError(updateError.message)
+        setIsLoading(false)
+        return
+      }
+
+      // Success - redirect to login
+      router.push('/login?password_reset=true')
+    } catch (err) {
+      setError('An error occurred. Please try again.')
       setIsLoading(false)
     }
-    // If successful, the user will be redirected by the server action
   }
 
   // If there's a link error, show error state
   if (linkError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black p-4 relative">
-        {/* Video Background */}
-        <div className="fixed inset-0 z-0">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-20"
-          >
-            <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black"></div>
-        </div>
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">
+              <span className="text-white">INN</span>
+              <span className="text-blue-500">FILL</span>
+            </h1>
+          </div>
 
-        <Card className="w-full max-w-md relative z-10 bg-gray-900/80 border-gray-800 backdrop-blur-xl text-white">
-          <CardHeader className="space-y-1">
-            <div className="flex justify-center mb-4">
-              <div className="h-12 w-12 rounded-full bg-red-900/50 border border-red-700 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Error Card */}
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <div className="flex justify-center mb-6">
+              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
               </div>
             </div>
-            <CardTitle className="text-2xl text-center text-white">Link Expired</CardTitle>
-            <CardDescription className="text-center text-gray-400">
+
+            <h2 className="text-2xl font-bold text-white text-center mb-3">Link Expired</h2>
+            <p className="text-gray-400 text-center mb-6">
               {linkError}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-amber-950/50 border border-amber-900 text-amber-400 px-4 py-3 rounded-lg text-sm">
+            </p>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-4 py-3 rounded-lg text-sm mb-6">
               <p className="font-semibold mb-1">💡 Tip:</p>
               <p>Password reset links expire after 1 hour for security. Request a new link to continue.</p>
             </div>
-            <Link href="/forgot-password" className="block">
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                Request New Reset Link
-              </Button>
-            </Link>
-            <Link href="/login" className="block">
-              <Button variant="outline" className="w-full bg-gray-800 border-gray-700 hover:bg-gray-700 text-white">
-                Back to Login
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+
+            <div className="space-y-3">
+              <Link href="/forgot-password" className="block">
+                <button className="w-full py-3 px-4 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 transition-all duration-300 hover:shadow-lg hover:shadow-white/20">
+                  Request New Reset Link
+                </button>
+              </Link>
+              <Link href="/login" className="block">
+                <button className="w-full py-3 px-4 bg-white/5 border border-white/10 text-white rounded-lg font-semibold hover:bg-white/10 transition-all duration-300">
+                  Back to Login
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4 relative">
-      {/* Video Background */}
-      <div className="fixed inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-20"
-        >
-          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black"></div>
-      </div>
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2">
+            <span className="text-white">INN</span>
+            <span className="text-blue-500">FILL</span>
+          </h1>
+          <p className="text-gray-400">Create a new password</p>
+        </div>
 
-      <Card className="w-full max-w-md relative z-10 bg-gray-900/80 border-gray-800 backdrop-blur-xl text-white">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <div className="text-3xl font-bold">
-              <span className="text-white">INN</span>
-              <span className="text-blue-500">FILL</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl text-center text-white">Reset your password</CardTitle>
-          <CardDescription className="text-center text-gray-400">
+        {/* Form Card */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <h2 className="text-2xl font-bold text-white mb-2 text-center">Reset your password</h2>
+          <p className="text-gray-400 text-center mb-6 text-sm">
             Enter your new password below
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          </p>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {error && (
-              <div className="bg-red-950/50 border border-red-900 text-red-400 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-300">New Password</Label>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                New Password
+              </label>
               <div className="relative">
-                <Input
+                <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   {...register('password')}
                   disabled={isLoading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 pr-10"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,25 +190,27 @@ export default function ResetPasswordPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-red-400">{errors.password.message}</p>
+                <p className="text-sm text-red-400 mt-1">{errors.password.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-gray-300">Confirm New Password</Label>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+                Confirm New Password
+              </label>
               <div className="relative">
-                <Input
+                <input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   {...register('confirmPassword')}
                   disabled={isLoading}
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 pr-10"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
                 >
                   {showConfirmPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,20 +225,20 @@ export default function ResetPasswordPage() {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-sm text-red-400">{errors.confirmPassword.message}</p>
+                <p className="text-sm text-red-400 mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
 
-            <Button
+            <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
               disabled={isLoading}
+              className="w-full py-3 px-4 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-white/20"
             >
               {isLoading ? 'Resetting password...' : 'Reset Password'}
-            </Button>
-          </CardContent>
-        </form>
-      </Card>
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }
