@@ -17,23 +17,7 @@ export async function login(email: string, password: string) {
   }
 
   revalidatePath('/', 'layout')
-  
-  // Get user profile to determine redirect
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', data.user.id)
-    .single()
-
-  if (profile?.role === 'freelancer') {
-    redirect('/dashboard/freelancer')
-  } else if (profile?.role === 'client') {
-    redirect('/dashboard/client')
-  } else if (profile?.role === 'admin') {
-    redirect('/admin/dashboard')
-  } else {
-    redirect('/dashboard')
-  }
+  redirect('/events')
 }
 
 export async function signup(
