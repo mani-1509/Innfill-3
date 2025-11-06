@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 import Link from 'next/link'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import { signup } from '@/lib/actions/auth'

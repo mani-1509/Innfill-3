@@ -2,14 +2,36 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
 import { Card } from '@/components/ui/card'
 import { Skeleton, SkeletonCircle } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import { FiUser, FiUsers, FiDollarSign, FiFileText, FiAward } from 'react-icons/fi'
+import { 
+  FiUser, 
+  FiUsers, 
+  FiDollarSign, 
+  FiFileText, 
+  FiAward,
+  FiPlus,
+  FiEdit2,
+  FiTrash2,
+  FiEye,
+  FiEyeOff,
+  FiCheckCircle,
+  FiClock,
+  FiArrowRight,
+  FiStar
+} from 'react-icons/fi'
 import { motion } from 'framer-motion'
+import { ServiceModal } from '@/components/modals/service-modal'
+import { 
+  getFreelancerServices, 
+  deleteService as deleteServiceAction,
+  toggleServiceVisibility as toggleServiceVisibilityAction
+} from '@/lib/actions/services'
 
 type TabType = 'profile' | 'services' | 'finance' | 'application' | 'skills'
 
@@ -19,11 +41,43 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('profile')
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [isOwnProfile, setIsOwnProfile] = useState(false)
+  
+  // Service modal states
+  const [showServiceModal, setShowServiceModal] = useState(false)
+  const [serviceToEdit, setServiceToEdit] = useState<any>(null)
+  const [services, setServices] = useState<any[]>([])
+  const [servicesLoading, setServicesLoading] = useState(false)
+  const [servicesError, setServicesError] = useState<string | null>(null)
+  const [servicesPage, setServicesPage] = useState(1)
+  const [servicesHasMore, setServicesHasMore] = useState(false)
+  
   const supabase = createClient()
 
   useEffect(() => {
     fetchProfile()
+    fetchCurrentUser()
   }, [username])
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchServices(profile.id, 1)
+      setIsOwnProfile(currentUser?.id === profile.id)
+    }
+  }, [profile, currentUser])
+
+  const fetchCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      setCurrentUser(profileData)
+    }
+  }
 
   const fetchProfile = async () => {
     setLoading(true)
@@ -39,6 +93,59 @@ export default function ProfilePage() {
       setProfile(data)
     }
     setLoading(false)
+  }
+
+  const fetchServices = async (freelancerId: string, page: number) => {
+    setServicesLoading(true)
+    setServicesError(null)
+
+    const result = await getFreelancerServices(freelancerId, page, 6)
+
+    if (result.error) {
+      setServicesError(result.error)
+    } else if (result.data) {
+      if (page === 1) {
+        setServices(result.data)
+      } else {
+        setServices(prev => [...prev, ...result.data])
+      }
+      setServicesHasMore(result.hasMore || false)
+    }
+
+    setServicesLoading(false)
+  }
+
+  const deleteService = async (serviceId: string) => {
+    const result = await deleteServiceAction(serviceId)
+    if (result.error) {
+      setServicesError(result.error)
+    } else {
+      // Refresh services
+      if (profile?.id) {
+        setServicesPage(1)
+        fetchServices(profile.id, 1)
+      }
+    }
+  }
+
+  const toggleVisibility = async (serviceId: string) => {
+    const result = await toggleServiceVisibilityAction(serviceId)
+    if (result.error) {
+      setServicesError(result.error)
+    } else {
+      // Refresh services
+      if (profile?.id) {
+        setServicesPage(1)
+        fetchServices(profile.id, 1)
+      }
+    }
+  }
+
+  const handleServiceSuccess = () => {
+    if (profile?.id) {
+      setServicesPage(1)
+      fetchServices(profile.id, 1)
+    }
   }
 
   if (loading) {
@@ -278,9 +385,203 @@ export default function ProfilePage() {
 
             {/* Services Tab Content */}
             {activeTab === 'services' && (
-              <div className="text-center">
-                <h2 className="text-white text-4xl font-bold mb-8">SERVICES</h2>
-                <p className="text-gray-400 text-lg">Services information coming soon...</p>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-white text-3xl font-bold">SERVICES</h2>
+                  {isOwnProfile && profile?.role === 'freelancer' && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setServiceToEdit(null)
+                        setShowServiceModal(true)
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-black bg-white rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-white/20"
+                    >
+                      <FiPlus className="w-4 h-4" />
+                      Add Service
+                    </motion.button>
+                  )}
+                </div>
+
+                {servicesError && (
+                  <div className="p-4 bg-red-900/20 border border-red-700 rounded-lg text-red-400 text-sm">
+                    {servicesError}
+                  </div>
+                )}
+
+                {servicesLoading && servicesPage === 1 ? (
+                  <div className="space-y-6">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="p-6 bg-white/5 rounded-lg border border-white/10">
+                        <Skeleton className="h-6 w-64 mb-4" />
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-4 w-3/4 mb-4" />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {[...Array(3)].map((_, j) => (
+                            <Skeleton key={j} className="h-32 w-full" />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : services.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FiUsers className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-400 text-lg mb-4">
+                      {isOwnProfile ? 'No services listed yet.' : 'No services available.'}
+                    </p>
+                    {isOwnProfile && profile?.role === 'freelancer' && (
+                      <button
+                        onClick={() => {
+                          setServiceToEdit(null)
+                          setShowServiceModal(true)
+                        }}
+                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        Create your first service
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {services.map((service: any) => (
+                      <div
+                        key={service.id}
+                        className="p-6 bg-white/5 rounded-lg border border-white/10 hover:border-white/20 transition-all"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <Link 
+                                  href={`/services/${service.id}`}
+                                  className="text-xl font-semibold text-white mb-2 hover:text-gray-300 transition-colors block"
+                                >
+                                  {service.title}
+                                </Link>
+                                <p className="text-gray-300 mb-3 line-clamp-2">
+                                  {service.description}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 flex-wrap mb-4">
+                              {service.category && (
+                                <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm">
+                                  {service.category}
+                                </span>
+                              )}
+                              <span className={`px-3 py-1 rounded-full text-sm ${
+                                service.is_active 
+                                  ? "bg-green-500/20 text-green-300"
+                                  : "bg-red-500/20 text-red-300"
+                              }`}>
+                                {service.is_active ? "Active" : "Hidden"}
+                              </span>
+                            </div>
+
+                            {/* Service Plans */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {service.plans?.map((plan: any) => (
+                                <div
+                                  key={plan.tier}
+                                  className="p-4 bg-white/5 rounded-lg border border-white/10"
+                                >
+                                  <h4 className="font-semibold text-white mb-2 flex items-center justify-between">
+                                    <span>{plan.tier}</span>
+                                    <span className="text-green-400">₹{plan.price}</span>
+                                  </h4>
+                                  <p className="text-sm text-gray-300 mb-3 line-clamp-2">
+                                    {plan.description}
+                                  </p>
+                                  <div className="space-y-2">
+                                    {plan.deliverables?.slice(0, 2).map((item: string, index: number) => (
+                                      <div key={index} className="flex items-center gap-2 text-sm text-gray-300">
+                                        <FiCheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                        <span className="line-clamp-1">{item}</span>
+                                      </div>
+                                    ))}
+                                    {plan.deliverables?.length > 2 && (
+                                      <p className="text-xs text-gray-400">
+                                        +{plan.deliverables.length - 2} more
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="mt-3 pt-3 border-t border-white/10 text-sm text-gray-400">
+                                    <div className="flex items-center gap-2">
+                                      <FiClock className="w-4 h-4" />
+                                      <span>{plan.delivery_time_days} days</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <FiArrowRight className="w-4 h-4" />
+                                      <span>{plan.revisions_included} revisions</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Edit/Delete Actions - Only for own profile */}
+                          {isOwnProfile && profile?.role === 'freelancer' && (
+                            <div className="flex lg:flex-col items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setServiceToEdit(service)
+                                  setShowServiceModal(true)
+                                }}
+                                className="p-2 text-gray-400 hover:text-white transition-colors"
+                                title="Edit Service"
+                              >
+                                <FiEdit2 className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => toggleVisibility(service.id)}
+                                className="p-2 text-gray-400 hover:text-white transition-colors"
+                                title={service.is_active ? "Hide Service" : "Show Service"}
+                              >
+                                {service.is_active ? (
+                                  <FiEyeOff className="w-5 h-5" />
+                                ) : (
+                                  <FiEye className="w-5 h-5" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
+                                    deleteService(service.id)
+                                  }
+                                }}
+                                className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                                title="Delete Service"
+                              >
+                                <FiTrash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Load More Button */}
+                    {servicesHasMore && (
+                      <div className="flex justify-center pt-4">
+                        <button
+                          onClick={() => {
+                            const nextPage = servicesPage + 1
+                            setServicesPage(nextPage)
+                            if (profile?.id) fetchServices(profile.id, nextPage)
+                          }}
+                          disabled={servicesLoading}
+                          className="px-6 py-2 bg-white text-black rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {servicesLoading ? 'Loading...' : 'Load more'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -322,6 +623,17 @@ export default function ProfilePage() {
             )}
           </Card>
         </div>
+
+        {/* Service Modal */}
+        <ServiceModal
+          isOpen={showServiceModal}
+          onClose={() => {
+            setShowServiceModal(false)
+            setServiceToEdit(null)
+          }}
+          onSuccess={handleServiceSuccess}
+          serviceToEdit={serviceToEdit}
+        />
       </div>
     </div>
   )
