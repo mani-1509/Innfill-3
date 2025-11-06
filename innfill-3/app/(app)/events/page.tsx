@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Event, EventType } from '@/types/database'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 
 const eventTypeColors: Record<EventType, string> = {
@@ -88,7 +89,7 @@ export default function EventsPage() {
           playsInline
           className="absolute inset-0 w-full h-full object-cover opacity-30"
         >
-          <source src="/videos/background.mp4" type="video/mp4" />
+          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
         </video>
       </div>
 
@@ -132,8 +133,19 @@ export default function EventsPage() {
 
           {/* Events Feed */}
           {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="space-y-6">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="bg-gray-900/80 border-gray-800 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Skeleton className="h-6 w-28" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-8 w-3/4 mb-4" />
+                  <Skeleton className="h-40 w-full mb-4" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-5/6" />
+                </Card>
+              ))}
             </div>
           ) : filteredEvents.length === 0 ? (
             <Card className="bg-gray-900/80 border-gray-800 p-12 text-center">

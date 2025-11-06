@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Event, EventType } from '@/types/database'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
 
 const eventTypeColors: Record<EventType, string> = {
   announcement: 'bg-blue-500',
@@ -309,8 +311,25 @@ export default function AdminEventsPage() {
 
           {/* Events List */}
           {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i} className="bg-gray-900/80 border-gray-800 p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <Skeleton className="h-6 w-1/2" />
+                      <Skeleton className="h-4 w-4/5" />
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Skeleton className="h-10 w-16" />
+                      <Skeleton className="h-10 w-16" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           ) : events.length === 0 ? (
             <Card className="bg-gray-900/80 border-gray-800 p-12 text-center">

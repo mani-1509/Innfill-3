@@ -23,10 +23,22 @@ export async function login(email: string, password: string) {
 export async function signup(
   email: string,
   password: string,
+  username: string,
   displayName: string,
   role: 'freelancer' | 'client'
 ) {
   const supabase = await createClient()
+
+  // Check if username is already taken
+  const { data: existingUser } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('username', username)
+    .single()
+
+  if (existingUser) {
+    return { error: 'Username is already taken' }
+  }
 
   // Create auth user
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -34,6 +46,7 @@ export async function signup(
     password,
     options: {
       data: {
+        username,
         display_name: displayName,
         role,
       },
@@ -51,6 +64,7 @@ export async function signup(
       .insert({
         id: authData.user.id,
         email,
+        username,
         role,
         display_name: displayName,
       })

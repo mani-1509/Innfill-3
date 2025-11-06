@@ -11,6 +11,11 @@ export type LoginFormData = z.infer<typeof loginSchema>
 // Register schema
 export const registerSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
+  username: z.string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(30, 'Username must be at most 30 characters')
+    .regex(/^[a-z0-9_]+$/, 'Username can only contain lowercase letters, numbers, and underscores')
+    .refine((val) => !val.includes('__'), 'Username cannot contain consecutive underscores'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
   displayName: z.string().min(2, 'Name must be at least 2 characters'),

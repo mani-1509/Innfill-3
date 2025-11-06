@@ -40,6 +40,7 @@ export default function RegisterPage() {
     const result = await signup(
       data.email,
       data.password,
+      data.username,
       data.displayName,
       data.role
     )
@@ -143,19 +144,40 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-300">Email</Label>
+                <Label htmlFor="username" className="text-gray-300">Username</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  {...register('email')}
+                  id="username"
+                  placeholder="johndoe"
+                  {...register('username')}
                   disabled={isLoading}
                   className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+                  onChange={(e) => {
+                    // Convert to lowercase automatically
+                    e.target.value = e.target.value.toLowerCase()
+                  }}
                 />
-                {errors.email && (
-                  <p className="text-sm text-red-400">{errors.email.message}</p>
+                {errors.username && (
+                  <p className="text-sm text-red-400">{errors.username.message}</p>
                 )}
+                <p className="text-xs text-gray-500">
+                  3-30 characters, lowercase letters, numbers, and underscores only
+                </p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-300">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@example.com"
+                {...register('email')}
+                disabled={isLoading}
+                className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+              />
+              {errors.email && (
+                <p className="text-sm text-red-400">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">

@@ -30,11 +30,14 @@ export type NotificationType =
 export interface Profile {
   id: string
   email: string
+  username: string
   role: UserRole
   display_name: string | null
   avatar_url: string | null
   bio: string | null
   company_name: string | null
+  location: string | null
+  portfolio_url: string | null
   skills: string[] | null
   payment_account_type: string | null
   payment_account_details: Record<string, any> | null

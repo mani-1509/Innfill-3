@@ -7,8 +7,8 @@ export default function AppLayout({
 }) {
   return (
     <>
-      <Navbar />
-      <main className="pt-20">
+      <main className="bg-black min-h-screen">
+        <Navbar />
         {children}
       </main>
     </>
