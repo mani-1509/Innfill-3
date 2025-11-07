@@ -42,6 +42,9 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password']
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
+  // Onboarding route - allow access for authenticated users
+  const isOnboardingRoute = pathname.startsWith('/onboarding')
+
   // Auth routes - redirect to /events if already logged in
   if (isPublicRoute && user) {
     return NextResponse.redirect(new URL('/events', request.url))
@@ -60,6 +63,20 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL('/login', request.url)
     redirectUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Check if user needs onboarding (incomplete profile)
+  if (user && !isOnboardingRoute) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+
+    // Redirect to onboarding if profile has temporary username
+    if (profile?.username?.startsWith('temp_')) {
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
   }
 
   // Admin routes - only admins can access

@@ -20,6 +20,25 @@ export async function login(email: string, password: string, rememberMe: boolean
   redirect(redirectTo || '/events')
 }
 
+export async function signInWithOAuth(provider: 'google' | 'github') {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  if (data.url) {
+    redirect(data.url)
+  }
+}
+
 export async function signup(
   email: string,
   password: string,
@@ -123,6 +142,48 @@ export async function resetPassword(password: string) {
 
   revalidatePath('/', 'layout')
   redirect('/login?password_reset=true')
+}
+
+export async function completeOnboarding(
+  role: 'freelancer' | 'client',
+  username: string
+) {
+  const supabase = await createClient()
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Not authenticated' }
+  }
+
+  // Check if username is already taken
+  const { data: existingUser } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('username', username)
+    .neq('id', user.id) // Exclude current user
+    .single()
+
+  if (existingUser) {
+    return { error: 'Username is already taken' }
+  }
+
+  // Update profile with role and username
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      role,
+      username,
+    })
+    .eq('id', user.id)
+
+  if (profileError) {
+    return { error: profileError.message }
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
 }
 
 export async function getUser() {

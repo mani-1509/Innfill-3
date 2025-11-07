@@ -90,7 +90,7 @@ export function Navbar() {
                 {/* Profile button */}
                 <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors">
                   {getProfileImg() ? (
-                    <img src={getProfileImg()!} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-white/20" />
+                    <img src={getProfileImg()} alt="U" className="w-8 h-8 rounded-full object-cover border border-white/20" />
                   ) : (
                     <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                       {(user.profile?.display_name || user.email || 'U').charAt(0).toUpperCase()}
