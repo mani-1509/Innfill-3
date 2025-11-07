@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth'
 import { createClient } from '@/lib/supabase/client'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -240,5 +240,33 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-2">
+              <span className="text-white">INN</span>
+              <span className="text-blue-500">FILL</span>
+            </h1>
+            <p className="text-gray-400">Loading...</p>
+          </div>
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <div className="h-6 w-32 bg-white/10 rounded animate-pulse mb-6" />
+            <div className="space-y-5">
+              <div className="h-12 bg-white/10 rounded-lg animate-pulse" />
+              <div className="h-12 bg-white/10 rounded-lg animate-pulse" />
+              <div className="h-12 bg-white/10 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
