@@ -5,9 +5,6 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database'
-import { Card } from '@/components/ui/card'
-import { Skeleton, SkeletonCircle } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { 
   FiUser, 
@@ -99,6 +96,14 @@ export default function ProfilePage() {
       setBannerPreview(profile.banner_url || null)
     }
   }, [profile, currentUser])
+
+  // Protect Finance and Application tabs - redirect to Profile if not own profile
+  useEffect(() => {
+    const restrictedTabs: TabType[] = ['finance', 'application']
+    if (!isOwnProfile && restrictedTabs.includes(activeTab)) {
+      setActiveTab('profile')
+    }
+  }, [isOwnProfile, activeTab])
 
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -332,53 +337,51 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
-        <div className="mx-2.5 mt-2.5">
-          <div className="relative rounded-full border border-white/20 bg-black px-4 md:px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <SkeletonCircle size={36} />
-            </div>
-            <div className="absolute left-1/2 -translate-x-1/2">
-              <div className="w-32 h-4 bg-neutral-900/70 rounded animate-pulse" />
-            </div>
-            <div className="flex items-center gap-2">
-              <SkeletonCircle size={28} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-black border-t border-white/10">
-          <div className="container mx-auto px-6 py-8">
-            <div className="flex items-center justify-between">
-              <div className="space-y-3">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-4 w-32" />
+        {/* Banner Skeleton */}
+        <div className="relative px-2">
+          <div className="relative mb-4 md:mb-8 px-4 md:px-0">
+            <div className="h-32 md:h-48 rounded-xl md:rounded-2xl border border-white/10 flex items-end p-4 m-5 md:p-8 relative overflow-hidden bg-white/5 animate-pulse">
+              {/* Profile Image Skeleton */}
+              <div className="absolute right-4 md:right-8 bottom-4 md:bottom-8 w-16 h-16 md:w-24 md:h-24 rounded-full bg-white/10 animate-pulse border-4 border-white/10" />
+              
+              {/* Name Skeleton */}
+              <div className="mb-2 relative z-10 pr-20 md:pr-32 space-y-2">
+                <div className="h-6 md:h-8 w-48 bg-white/10 rounded animate-pulse" />
+                <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
               </div>
-              <SkeletonCircle size={96} />
             </div>
           </div>
-        </div>
-        <div className="bg-black border-t border-white/10">
-          <div className="container mx-auto px-6">
-            <div className="flex gap-3 py-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-10 w-24 rounded-t-lg" />
-              ))}
+
+          {/* Tabs Skeleton */}
+          <div className="bg-black border-t border-white/10 pt-4">
+            <div className="container mx-auto px-6">
+              <div className="flex justify-center py-2">
+                <div className="flex bg-white/5 rounded-lg p-1 border border-white/10 gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-10 w-24 bg-white/10 rounded-md animate-pulse" />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="container mx-auto px-6 py-12">
-          <Card className="bg-neutral-950 border border-white/10 p-12 space-y-8">
-            <div className="flex flex-col items-center">
-              <Skeleton className="h-10 w-40 mb-8" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+
+          {/* Content Skeleton */}
+          <div className="container mx-auto px-6 py-12">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12">
+              {/* Title Skeleton */}
+              <div className="h-8 w-48 bg-white/10 rounded animate-pulse mb-8" />
+              
+              {/* Grid Skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-5 w-40" />
+                  <div key={i} className="p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="h-3 w-24 bg-white/10 rounded animate-pulse mb-2" />
+                    <div className="h-5 w-40 bg-white/10 rounded animate-pulse" />
                   </div>
                 ))}
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     )
@@ -479,28 +482,34 @@ export default function ProfilePage() {
                   <FiUsers className="w-4 h-4" />
                   <span className="text-sm">Services</span>
                 </button>
-                <button
-                  onClick={() => setActiveTab('finance')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
-                    activeTab === 'finance'
-                      ? 'bg-white text-black font-semibold'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <FiDollarSign className="w-4 h-4" />
-                  <span className="text-sm">Finance</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('application')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
-                    activeTab === 'application'
-                      ? 'bg-white text-black font-semibold'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <FiFileText className="w-4 h-4" />
-                  <span className="text-sm">Application</span>
-                </button>
+                {/* Finance Tab - Only visible to profile owner */}
+                {isOwnProfile && (
+                  <button
+                    onClick={() => setActiveTab('finance')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'finance'
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <FiDollarSign className="w-4 h-4" />
+                    <span className="text-sm">Finance</span>
+                  </button>
+                )}
+                {/* Application Tab - Only visible to profile owner */}
+                {isOwnProfile && (
+                  <button
+                    onClick={() => setActiveTab('application')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'application'
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <FiFileText className="w-4 h-4" />
+                    <span className="text-sm">Application</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActiveTab('skills')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
@@ -519,7 +528,7 @@ export default function ProfilePage() {
 
         {/* Content Area */}
         <div className="container mx-auto px-6 py-12">
-          <Card className="bg-neutral-950 border border-white/10 p-12">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12">
             {/* Profile Tab Content */}
             {activeTab === 'profile' && (
               <div>
@@ -686,13 +695,13 @@ export default function ProfilePage() {
                 {servicesLoading && servicesPage === 1 ? (
                   <div className="space-y-6">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="p-6 bg-white/5 rounded-lg border border-white/10">
-                        <Skeleton className="h-6 w-64 mb-4" />
-                        <Skeleton className="h-4 w-full mb-2" />
-                        <Skeleton className="h-4 w-3/4 mb-4" />
+                      <div key={i} className="p-6 bg-white/5 rounded-lg border border-white/10 animate-pulse">
+                        <div className="h-6 w-64 bg-white/10 rounded mb-4" />
+                        <div className="h-4 w-full bg-white/10 rounded mb-2" />
+                        <div className="h-4 w-3/4 bg-white/10 rounded mb-4" />
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {[...Array(3)].map((_, j) => (
-                            <Skeleton key={j} className="h-32 w-full" />
+                            <div key={j} className="h-32 w-full bg-white/10 rounded" />
                           ))}
                         </div>
                       </div>
@@ -937,7 +946,7 @@ export default function ProfilePage() {
                 )}
               </div>
             )}
-          </Card>
+          </div>
         </div>
 
         {/* Service Modal */}

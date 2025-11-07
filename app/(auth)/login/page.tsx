@@ -39,7 +39,8 @@ export default function LoginPage() {
     setError(null)
     setSuccessMessage(null)
 
-    const result = await login(data.email, data.password, rememberMe)
+    const redirectTo = searchParams.get('redirect') || undefined
+    const result = await login(data.email, data.password, rememberMe, redirectTo)
 
     if (result?.error) {
       setError(result.error)
