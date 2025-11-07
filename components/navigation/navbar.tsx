@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { logout } from '@/lib/actions/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FiUser, FiDollarSign, FiTrendingUp, FiSettings, FiLogOut, FiHome, FiUsers, FiMessageSquare, FiBell, FiMenu, FiX } from 'react-icons/fi'
+import logo from '../../public/logo.png'
 
 export function Navbar() {
   const [user, setUser] = useState<any>(null)
@@ -55,7 +56,7 @@ export function Navbar() {
             {/* Logo */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
               <Link href="/events" className="text-2xl font-bold text-white">
-                INNFILL
+                <img src={logo.src} alt="Innfill Logo" className="h-8 w-auto rounded" />
               </Link>
               </motion.div>
 

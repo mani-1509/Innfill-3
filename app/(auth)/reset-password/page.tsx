@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth'
 import { createClient } from '@/lib/supabase/client'
+import logo from '../../../public/logo.png'
 
 function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -89,10 +90,7 @@ function ResetPasswordForm() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">
-              <span className="text-white">INN</span>
-              <span className="text-blue-500">FILL</span>
-            </h1>
+            <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           </div>
 
           {/* Error Card */}
@@ -138,10 +136,7 @@ function ResetPasswordForm() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="text-white">INN</span>
-            <span className="text-blue-500">FILL</span>
-          </h1>
+          <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           <p className="text-gray-400">Create a new password</p>
         </div>
 
@@ -249,10 +244,7 @@ export default function ResetPasswordPage() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">
-              <span className="text-white">INN</span>
-              <span className="text-blue-500">FILL</span>
-            </h1>
+            <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
             <p className="text-gray-400">Loading...</p>
           </div>
           <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">

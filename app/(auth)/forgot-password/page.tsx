@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { forgotPasswordSchema, type ForgotPasswordFormData } from '@/lib/validations/auth'
 import { forgotPassword } from '@/lib/actions/auth'
+import logo from '../../../public/logo.png'
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -41,10 +42,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-2">
-              <span className="text-white">INN</span>
-              <span className="text-blue-500">FILL</span>
-            </h1>
+            <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           </div>
 
           {/* Success Card */}
@@ -94,10 +92,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="text-white">INN</span>
-            <span className="text-blue-500">FILL</span>
-          </h1>
+          <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           <p className="text-gray-400">Reset your password</p>
         </div>
 

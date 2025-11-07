@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { completeOnboarding } from '@/lib/actions/auth'
+import logo from '../../../public/logo.png'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -70,10 +71,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="text-white">INN</span>
-            <span className="text-blue-500">FILL</span>
-          </h1>
+            <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           <p className="text-gray-400">Complete your profile to get started</p>
         </div>
 

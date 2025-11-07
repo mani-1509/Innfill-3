@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { login, signInWithOAuth } from '@/lib/actions/auth'
+import logo from '../../../public/logo.png'
 
 function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -68,10 +69,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="text-white">INN</span>
-            <span className="text-blue-500">FILL</span>
-          </h1>
+            <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           <p className="text-gray-400">Welcome back to your workspace</p>
         </div>
 

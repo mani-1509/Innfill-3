@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import Link from 'next/link'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import { signup, signInWithOAuth } from '@/lib/actions/auth'
+import logo from '../../../public/logo.png'
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -64,10 +65,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="text-white">INN</span>
-            <span className="text-blue-500">FILL</span>
-          </h1>
+          <img src={logo.src} alt="INNFILL" className="mx-auto h-20 w-auto rounded" />
           <p className="text-gray-400">Join thousands of freelancers and clients</p>
         </div>
 
