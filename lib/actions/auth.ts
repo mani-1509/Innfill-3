@@ -23,10 +23,15 @@ export async function login(email: string, password: string, rememberMe: boolean
 export async function signInWithOAuth(provider: 'google' | 'github') {
   const supabase = await createClient()
 
+  // Get the correct redirect URL based on environment
+  const isProduction = process.env.NODE_ENV === 'production'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const redirectUrl = `${siteUrl}/auth/callback`
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectTo: redirectUrl,
     },
   })
 
