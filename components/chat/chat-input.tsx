@@ -48,25 +48,17 @@ export function ChatInput({ roomId, onMessageSent }: ChatInputProps) {
 
         if (user) {
           for (const file of attachments) {
-            console.log('Uploading file:', file.name);
             const result = await uploadChatAttachment(file, user.id, roomId);
-            console.log('Upload result:', result);
             if (result.success && result.url) {
               attachmentUrls.push(result.url);
-              console.log('Added attachment URL:', result.url);
-            } else {
-              console.error('Failed to upload file:', file.name, result.error);
             }
           }
         }
         setUploading(false);
       }
-
-      console.log('Sending message with attachments:', attachmentUrls);
       
       // Send message
       const result = await sendMessage(roomId, message, attachmentUrls.length > 0 ? attachmentUrls : undefined);
-      console.log('Send message result:', result);
 
       if (result.success) {
         setMessage("");

@@ -39,12 +39,20 @@ export function ChatRoom({ roomId, currentUserId }: ChatRoomProps) {
     markMessagesAsRead(roomId);
   }, [roomId]);
 
-  // Set up real-time subscription
+  // Set up real-time subscription with polling fallback
   useEffect(() => {
     const supabase = createClient();
+    let pollInterval: NodeJS.Timeout | null = null;
+    let isSubscribed = false;
+    let lastMessageCount = 0;
 
     const channel = supabase
-      .channel(`room-${roomId}`)
+      .channel(`room-${roomId}`, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: currentUserId },
+        },
+      })
       .on(
         "postgres_changes",
         {
@@ -67,9 +75,31 @@ export function ChatRoom({ roomId, currentUserId }: ChatRoomProps) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          isSubscribed = true;
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          isSubscribed = false;
+        }
+      });
+
+    // Polling fallback - check for new messages every 3 seconds
+    pollInterval = setInterval(async () => {
+      if (!isSubscribed) {
+        const result = await getMessages(roomId);
+        if (result.success && result.data) {
+          if (result.data.length !== lastMessageCount) {
+            setMessages(result.data);
+            lastMessageCount = result.data.length;
+            setTimeout(() => scrollToBottom(true), 100);
+            await markMessagesAsRead(roomId);
+          }
+        }
+      }
+    }, 3000);
 
     return () => {
+      if (pollInterval) clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [roomId, currentUserId]);
