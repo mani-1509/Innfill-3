@@ -36,13 +36,16 @@ export interface Profile {
   avatar_url: string | null
   banner_url: string | null
   bio: string | null
+  // Client-specific fields
   company_name: string | null
+  total_spent: number
+  client_rating: number
+  // Freelancer-specific fields
   location: string | null
   portfolio_url: string | null
   skills: string[] | null
   payment_account_type: string | null
   payment_account_details: Record<string, any> | null
-  gst_number: string | null
   total_earnings: number
   total_orders: number
   rating: number

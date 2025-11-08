@@ -191,19 +191,27 @@ export default function ProfilePage() {
     setEditError(null)
 
     try {
+      // Build update object based on role
+      const updateData: any = {
+        display_name: editFormData.display_name,
+        bio: editFormData.bio,
+        avatar_url: editFormData.avatar_url,
+        banner_url: editFormData.banner_url,
+        updated_at: new Date().toISOString(),
+      }
+
+      // Add role-specific fields
+      if (profile?.role === 'freelancer') {
+        updateData.location = editFormData.location
+        updateData.portfolio_url = editFormData.portfolio_url
+        updateData.skills = editFormData.skills
+      } else if (profile?.role === 'client') {
+        updateData.company_name = editFormData.company_name
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          display_name: editFormData.display_name,
-          bio: editFormData.bio,
-          company_name: editFormData.company_name,
-          location: editFormData.location,
-          portfolio_url: editFormData.portfolio_url,
-          skills: editFormData.skills,
-          avatar_url: editFormData.avatar_url,
-          banner_url: editFormData.banner_url,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', profile?.id)
 
       if (error) throw error
@@ -471,19 +479,24 @@ export default function ProfilePage() {
                   <FiUser className="w-4 h-4" />
                   <span className="text-sm">Profile</span>
                 </button>
-                <button
-                  onClick={() => setActiveTab('services')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
-                    activeTab === 'services'
-                      ? 'bg-white text-black font-semibold'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <FiUsers className="w-4 h-4" />
-                  <span className="text-sm">Services</span>
-                </button>
-                {/* Finance Tab - Only visible to profile owner */}
-                {isOwnProfile && (
+                
+                {/* Services Tab - Only for freelancers */}
+                {profile?.role === 'freelancer' && (
+                  <button
+                    onClick={() => setActiveTab('services')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'services'
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <FiUsers className="w-4 h-4" />
+                    <span className="text-sm">Services</span>
+                  </button>
+                )}
+                
+                {/* Finance Tab - Only visible to freelancer profile owner */}
+                {isOwnProfile && profile?.role === 'freelancer' && (
                   <button
                     onClick={() => setActiveTab('finance')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
@@ -496,8 +509,9 @@ export default function ProfilePage() {
                     <span className="text-sm">Finance</span>
                   </button>
                 )}
-                {/* Application Tab - Only visible to profile owner */}
-                {isOwnProfile && (
+                
+                {/* Application Tab - Only visible to freelancer profile owner */}
+                {isOwnProfile && profile?.role === 'freelancer' && (
                   <button
                     onClick={() => setActiveTab('application')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
@@ -510,17 +524,21 @@ export default function ProfilePage() {
                     <span className="text-sm">Application</span>
                   </button>
                 )}
-                <button
-                  onClick={() => setActiveTab('skills')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
-                    activeTab === 'skills'
-                      ? 'bg-white text-black font-semibold'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <FiAward className="w-4 h-4" />
-                  <span className="text-sm">Skills</span>
-                </button>
+                
+                {/* Skills Tab - Only for freelancers */}
+                {profile?.role === 'freelancer' && (
+                  <button
+                    onClick={() => setActiveTab('skills')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'skills'
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    <FiAward className="w-4 h-4" />
+                    <span className="text-sm">Skills</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -587,7 +605,7 @@ export default function ProfilePage() {
                   </motion.div>
 
                   {/* Portfolio URL */}
-                  {profile.portfolio_url && (
+                  {profile.portfolio_url && profile.role === 'freelancer' && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -607,8 +625,8 @@ export default function ProfilePage() {
                     </motion.div>
                   )}
 
-                  {/* Location */}
-                  {profile.location && (
+                  {/* Location - Only for freelancers */}
+                  {profile.location && profile.role === 'freelancer' && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -620,8 +638,8 @@ export default function ProfilePage() {
                     </motion.div>
                   )}
 
-                  {/* Company Name */}
-                  {profile.company_name && (
+                  {/* Company Name - Only for clients */}
+                  {profile.company_name && profile.role === 'client' && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -633,7 +651,7 @@ export default function ProfilePage() {
                     </motion.div>
                   )}
 
-                  {/* Stats */}
+                  {/* Total Orders - For both roles */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -644,9 +662,9 @@ export default function ProfilePage() {
                     <p className="text-white text-lg font-medium">{profile.total_orders}</p>
                   </motion.div>
 
+                  {/* Freelancer-specific stats */}
                   {profile.role === 'freelancer' && (
                     <>
-
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -659,6 +677,36 @@ export default function ProfilePage() {
                           <p className="text-white text-lg font-medium">{profile.rating.toFixed(1)}</p>
                         </div>
                       </motion.div>
+                    </>
+                  )}
+
+                  {/* Client-specific stats */}
+                  {profile.role === 'client' && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.65 }}
+                        className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-white/20 transition-all"
+                      >
+                        <label className="text-gray-400 text-xs uppercase tracking-wider mb-2 block">Client Rating</label>
+                        <div className="flex items-center gap-2">
+                          <FiStar className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                          <p className="text-white text-lg font-medium">{profile.client_rating?.toFixed(1) || '0.0'}</p>
+                        </div>
+                      </motion.div>
+
+                      {isOwnProfile && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.7 }}
+                          className="p-4 bg-white/5 rounded-lg border border-white/10 hover:border-white/20 transition-all"
+                        >
+                          <label className="text-gray-400 text-xs uppercase tracking-wider mb-2 block">Total Spent</label>
+                          <p className="text-white text-lg font-medium">₹{profile.total_spent?.toFixed(2) || '0.00'}</p>
+                        </motion.div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1080,88 +1128,96 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                {/* Company Name */}
-                <div>
-                  <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.company_name}
-                    onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
-                    placeholder="Your company name (optional)"
-                  />
-                </div>
-
-                {/* Location */}
-                <div>
-                  <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.location}
-                    onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
-                    placeholder="City, Country"
-                  />
-                </div>
-
-                {/* Portfolio URL */}
-                <div>
-                  <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
-                    Portfolio URL
-                  </label>
-                  <input
-                    type="url"
-                    value={editFormData.portfolio_url}
-                    onChange={(e) => setEditFormData({ ...editFormData, portfolio_url: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
-                    placeholder="https://yourportfolio.com"
-                  />
-                </div>
-
-                {/* Skills */}
-                <div>
-                  <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
-                    Skills
-                  </label>
-                  <div className="flex gap-2 mb-3">
+                {/* Company Name - Only for clients */}
+                {profile?.role === 'client' && (
+                  <div>
+                    <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
+                      Company Name
+                    </label>
                     <input
                       type="text"
-                      value={newSkill}
-                      onChange={(e) => setNewSkill(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addSkill()}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
-                      placeholder="Add a skill..."
+                      value={editFormData.company_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                      placeholder="Your company name"
                     />
-                    <button
-                      onClick={addSkill}
-                      className="px-4 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 transition-colors"
-                    >
-                      <FiPlus className="w-5 h-5" />
-                    </button>
                   </div>
-                  {editFormData.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {editFormData.skills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
-                        >
-                          {skill}
-                          <button
-                            onClick={() => removeSkill(skill)}
-                            className="hover:text-white transition-colors"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
+                )}
+
+                {/* Location - Only for freelancers */}
+                {profile?.role === 'freelancer' && (
+                  <div>
+                    <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.location}
+                      onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                      placeholder="City, Country"
+                    />
+                  </div>
+                )}
+
+                {/* Portfolio URL - Only for freelancers */}
+                {profile?.role === 'freelancer' && (
+                  <div>
+                    <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
+                      Portfolio URL
+                    </label>
+                    <input
+                      type="url"
+                      value={editFormData.portfolio_url}
+                      onChange={(e) => setEditFormData({ ...editFormData, portfolio_url: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                      placeholder="https://yourportfolio.com"
+                    />
+                  </div>
+                )}
+
+                {/* Skills - Only for freelancers */}
+                {profile?.role === 'freelancer' && (
+                  <div>
+                    <label className="text-gray-400 text-sm uppercase tracking-wider mb-2 block">
+                      Skills
+                    </label>
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={newSkill}
+                        onChange={(e) => setNewSkill(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                        className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                        placeholder="Add a skill..."
+                      />
+                      <button
+                        onClick={addSkill}
+                        className="px-4 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                      >
+                        <FiPlus className="w-5 h-5" />
+                      </button>
                     </div>
-                  )}
-                </div>
+                    {editFormData.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {editFormData.skills.map((skill, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm"
+                          >
+                            {skill}
+                            <button
+                              onClick={() => removeSkill(skill)}
+                              className="hover:text-white transition-colors"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
