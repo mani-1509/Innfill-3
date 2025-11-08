@@ -1,6 +1,11 @@
+'use client'
+
 import Link from 'next/link'
+import { useState } from 'react'
 
 export default function Home() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-black text-white relative">
       {/* Video Background */}
@@ -61,14 +66,75 @@ export default function Home() {
               </div>
 
               {/* Mobile Menu Button */}
-              <button className="md:hidden text-white p-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-all"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
         </nav>
+
+        {/* Mobile Menu Dropdown - Full Screen Overlay */}
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+            
+            {/* Menu Panel */}
+            <div className="fixed top-20 left-0 right-0 mx-4 z-50 md:hidden">
+              <div className="bg-black/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
+                <div className="p-6 space-y-4">
+                  {/* Navigation Links */}
+                  <Link 
+                    href="#capabilities" 
+                    className="block text-lg text-gray-300 hover:text-white hover:bg-white/5 px-4 py-3 rounded-lg transition-all"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    How It Works
+                  </Link>
+                  <Link 
+                    href="#cta" 
+                    className="block text-lg text-gray-300 hover:text-white hover:bg-white/5 px-4 py-3 rounded-lg transition-all"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Contact
+                  </Link>
+                  
+                  {/* Divider */}
+                  <div className="border-t border-white/10 my-4" />
+                  
+                  {/* Auth Buttons */}
+                  <div className="space-y-3 pt-2">
+                    <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                      <button className="w-full px-6 py-3 bg-white/5 border border-white/20 text-white rounded-xl hover:bg-white/10 transition-all font-medium">
+                        Sign In
+                      </button>
+                    </Link>
+                    <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                      <button className="bg-white text-black rounded-lg hover:bg-gray-200 transition-all font-semibold w-full px-6 py-3 mt-3 shadow-lg shadow-blue-500/20">
+                        Start Now →
+                      </button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-20 md:py-32">
