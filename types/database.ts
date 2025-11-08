@@ -87,6 +87,7 @@ export interface Order {
   plan_tier: PlanTier
   requirements: string | null
   requirement_files: string[] | null
+  requirement_links: string[] | null
   price: number
   delivery_days: number
   revisions_allowed: number
@@ -94,6 +95,7 @@ export interface Order {
   status: OrderStatus
   delivery_message: string | null
   delivery_files: string[] | null
+  delivery_links: string[] | null
   delivered_at: string | null
   completed_at: string | null
   created_at: string

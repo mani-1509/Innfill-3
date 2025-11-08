@@ -255,7 +255,7 @@ export async function getService(serviceId: string) {
     plans: [
       {
         id: `${service.id}-basic`,
-        tier: 'Standard',
+        tier: 'Basic',
         price: service.basic_price,
         delivery_time_days: service.basic_delivery_days,
         description: service.description,
@@ -265,7 +265,7 @@ export async function getService(serviceId: string) {
       },
       {
         id: `${service.id}-standard`,
-        tier: 'Pro',
+        tier: 'Standard',
         price: service.standard_price,
         delivery_time_days: service.standard_delivery_days,
         description: service.description,

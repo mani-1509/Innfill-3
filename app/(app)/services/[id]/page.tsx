@@ -4,7 +4,10 @@ import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getService } from '@/lib/actions/services'
-import { motion } from 'framer-motion'
+import { createOrder } from '@/lib/actions/orders'
+import { uploadOrderFiles } from '@/lib/utils/upload-utils'
+import { createClient } from '@/lib/supabase/client'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   FiClock,
   FiCheck,
@@ -12,14 +15,12 @@ import {
   FiShare2,
   FiMessageSquare,
   FiX,
+  FiUpload,
+  FiLink,
+  FiTrash2,
+  FiFile,
+  FiAlertCircle,
 } from 'react-icons/fi'
-
-// Declare Razorpay on window
-declare global {
-  interface Window {
-    Razorpay: any
-  }
-}
 
 interface ServiceDetailPageProps {
   params: Promise<{
@@ -35,25 +36,20 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState<string>('')
   const [selectedPlan, setSelectedPlan] = useState<string>('Standard')
-  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [showOrderModal, setShowOrderModal] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false)
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
-  const [paymentError, setPaymentError] = useState<string | null>(null)
+  
+  // Order form state
+  const [requirements, setRequirements] = useState('')
+  const [requirementFiles, setRequirementFiles] = useState<File[]>([])
+  const [requirementLinks, setRequirementLinks] = useState<string[]>([''])
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchService()
-    loadRazorpay()
   }, [id])
-
-  const loadRazorpay = () => {
-    const script = document.createElement('script')
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    script.async = true
-    script.onload = () => setRazorpayLoaded(true)
-    document.body.appendChild(script)
-  }
 
   const fetchService = async () => {
     setLoading(true)
@@ -80,56 +76,135 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   }
 
   const handleContinue = () => {
-    setShowReviewModal(true)
+    setShowOrderModal(true)
+    setOrderError(null)
   }
 
-  const processPayment = async () => {
-    if (!razorpayLoaded) {
-      setPaymentError('Payment gateway is loading. Please try again.')
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    
+    // Check file size (5MB = 5 * 1024 * 1024 bytes)
+    const maxSize = 5 * 1024 * 1024
+    const invalidFiles = files.filter(file => file.size > maxSize)
+    
+    if (invalidFiles.length > 0) {
+      setOrderError(`Some files exceed 5MB limit: ${invalidFiles.map(f => f.name).join(', ')}`)
+      return
+    }
+    
+    setRequirementFiles(prev => [...prev, ...files])
+    setOrderError(null)
+  }
+
+  const removeFile = (index: number) => {
+    setRequirementFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const addLinkField = () => {
+    setRequirementLinks(prev => [...prev, ''])
+  }
+
+  const updateLink = (index: number, value: string) => {
+    setRequirementLinks(prev => prev.map((link, i) => i === index ? value : link))
+  }
+
+  const removeLink = (index: number) => {
+    setRequirementLinks(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const validateLinks = (): boolean => {
+    const filledLinks = requirementLinks.filter(link => link.trim())
+    
+    for (const link of filledLinks) {
+      try {
+        new URL(link)
+      } catch {
+        setOrderError('Please enter valid URLs for all links')
+        return false
+      }
+    }
+    
+    return true
+  }
+
+  const createOrderHandler = async () => {
+    if (!requirements.trim()) {
+      setOrderError('Please provide order requirements')
       return
     }
 
-    setIsProcessingPayment(true)
-    setPaymentError(null)
+    if (!validateLinks()) {
+      return
+    }
+
+    setIsCreatingOrder(true)
+    setOrderError(null)
 
     try {
       const plan = getSelectedPlanDetails()
-      if (!plan) return
-
-      // TODO: Create order on backend and get order ID
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_dummy',
-        amount: parseFloat(plan.price) * 100, // Amount in paise
-        currency: 'INR',
-        name: 'INNFILL',
-        description: `${service.title} - ${plan.tier} Plan`,
-        image: '/logo.png',
-        handler: function (response: any) {
-          // Payment successful
-          console.log('Payment successful:', response)
-          router.push(`/orders/${response.razorpay_payment_id}`)
-        },
-        prefill: {
-          name: '',
-          email: '',
-          contact: '',
-        },
-        theme: {
-          color: '#3b82f6',
-        },
+      if (!plan) {
+        setOrderError('Selected plan not found')
+        return
       }
 
-      const razorpay = new window.Razorpay(options)
-      razorpay.open()
+      // Get current user ID
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
+      // Upload files to Supabase Storage
+      let uploadedFileUrls: string[] = []
+      
+      if (requirementFiles.length > 0) {
+        const { urls, errors } = await uploadOrderFiles(requirementFiles, user.id)
+        
+        if (errors.length > 0) {
+          setOrderError(`File upload errors: ${errors.join(', ')}`)
+          setIsCreatingOrder(false)
+          return
+        }
+        
+        uploadedFileUrls = urls
+      }
+
+      // Filter out empty links
+      const validLinks = requirementLinks.filter(link => link.trim())
+
+      const result = await createOrder({
+        serviceId: service.id,
+        planTier: selectedPlan.toLowerCase() as 'basic' | 'standard' | 'premium',
+        requirements,
+        requirementFiles: uploadedFileUrls,
+        requirementLinks: validLinks.length > 0 ? validLinks : undefined,
+      })
+
+      if (result.error) {
+        setOrderError(result.error)
+        return
+      }
+
+      // Success! Redirect to order details page
+      router.push(`/orders/${result.orderId}`)
     } catch (err: any) {
-      setPaymentError(err.message || 'Payment failed. Please try again.')
+      setOrderError(err.message || 'Failed to create order')
     } finally {
-      setIsProcessingPayment(false)
+      setIsCreatingOrder(false)
     }
   }
 
+  const calculatePlatformFee = (price: number) => {
+    const feePercentage = parseFloat(process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE || '15')
+    return (price * feePercentage) / 100
+  }
+
   const getSelectedPlanDetails = () => {
-    return service.plans.find((plan: any) => plan.tier === selectedPlan)
+    // Case-insensitive matching to handle "Standard" vs "standard"
+    return service.plans.find((plan: any) => 
+      plan.tier.toLowerCase() === selectedPlan.toLowerCase()
+    )
   }
 
   if (loading) {
@@ -350,7 +425,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
             <div className="sticky top-8 modern-card p-6 space-y-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
               {/* Plan Selector */}
               <div className="grid grid-cols-3 gap-2">
-                {["Standard", "Pro", "Premium"].map((tier) => (
+                {["Basic", "Standard", "Premium"].map((tier) => (
                   <motion.button
                     key={tier}
                     whileHover={{ scale: 1.05 }}
@@ -430,19 +505,19 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
         </div>
       </div>
 
-      {/* Review Modal */}
-      {showReviewModal && (
+      {/* Order Creation Modal */}
+      {showOrderModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-gray-900 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-gray-900 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Review Your Order</h2>
+              <h2 className="text-2xl font-bold">Place Your Order</h2>
               <button
-                onClick={() => setShowReviewModal(false)}
+                onClick={() => setShowOrderModal(false)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <FiX className="w-6 h-6" />
@@ -486,51 +561,154 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                   </div>
                 </div>
 
-                {/* Deliverables */}
-                <div>
-                  <h4 className="font-semibold mb-3">What you'll get:</h4>
-                  <div className="space-y-2">
-                    {getSelectedPlanDetails()?.deliverables?.map((deliverable: string, index: number) => (
-                      <div key={index} className="flex items-start gap-2 text-sm">
-                        <FiCheck className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-                        <span>{deliverable}</span>
-                      </div>
-                    ))}
+                {/* Requirements Form */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Order Requirements *
+                    </label>
+                    <textarea
+                      value={requirements}
+                      onChange={(e) => setRequirements(e.target.value)}
+                      placeholder="Describe what you need in detail. Include any specific requirements, preferences, or guidelines..."
+                      rows={5}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 resize-none"
+                    />
+                  </div>
+
+                  {/* File Upload Section */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      Attach Files (Optional)
+                    </label>
+                    <div className="space-y-3">
+                      <label className="flex items-center justify-center gap-2 w-full py-3 px-4 border-2 border-dashed border-white/20 rounded-lg hover:border-white/40 cursor-pointer transition-colors bg-white/5">
+                        <FiUpload className="w-5 h-5" />
+                        <span className="text-sm">Upload files (Max 5MB each)</span>
+                        <input
+                          type="file"
+                          multiple
+                          onChange={handleFileUpload}
+                          className="hidden"
+                          accept="image/*,.pdf,.doc,.docx,.zip"
+                        />
+                      </label>
+
+                      {/* File Preview */}
+                      {requirementFiles.length > 0 && (
+                        <div className="space-y-2">
+                          {requirementFiles.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2"
+                            >
+                              <div className="flex items-center gap-2">
+                                <FiFile className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm">{file.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  ({(file.size / 1024).toFixed(1)} KB)
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => removeFile(index)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <FiTrash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* External Links Section */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      External Links (Optional)
+                    </label>
+                    <div className="space-y-2">
+                      {requirementLinks.map((link, index) => (
+                        <div key={index} className="flex gap-2">
+                          <div className="flex-1 relative">
+                            <FiLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="url"
+                              value={link}
+                              onChange={(e) => updateLink(index, e.target.value)}
+                              placeholder="https://drive.google.com/... or Dropbox link"
+                              className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                          </div>
+                          {requirementLinks.length > 1 && (
+                            <button
+                              onClick={() => removeLink(index)}
+                              className="px-3 py-2 text-red-400 hover:text-red-300 border border-red-400/20 rounded-lg hover:bg-red-400/10 transition-colors"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        onClick={addLinkField}
+                        className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
+                      >
+                        <FiLink className="w-4 h-4" />
+                        Add another link
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Payment Error */}
-                {paymentError && (
+                {/* Price Breakdown */}
+                <div className="bg-white/5 rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold mb-3">Price Breakdown</h4>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Service Price</span>
+                    <span>₹{getSelectedPlanDetails()?.price}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Platform Fee (15%)</span>
+                    <span>₹{calculatePlatformFee(parseFloat(getSelectedPlanDetails()?.price || '0')).toFixed(2)}</span>
+                  </div>
+                  <div className="pt-2 border-t border-white/10 flex justify-between font-bold">
+                    <span>Total</span>
+                    <span className="text-green-400">
+                      ₹{(
+                        parseFloat(getSelectedPlanDetails()?.price || '0') +
+                        calculatePlatformFee(parseFloat(getSelectedPlanDetails()?.price || '0'))
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    <FiAlertCircle className="inline w-3 h-3 mr-1" />
+                    Payment will be processed after the freelancer accepts your order
+                  </p>
+                </div>
+
+                {/* Error Display */}
+                {orderError && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                    <p className="text-red-400 text-sm mb-2">{paymentError}</p>
-                    <button
-                      onClick={() => {
-                        setPaymentError(null)
-                        processPayment()
-                      }}
-                      className="text-red-400 hover:text-red-300 text-sm underline"
-                    >
-                      Try Again
-                    </button>
+                    <p className="text-red-400 text-sm">{orderError}</p>
                   </div>
                 )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
-                    onClick={() => setShowReviewModal(false)}
-                    className="flex-1 py-3 px-4 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all duration-300"
+                    onClick={() => setShowOrderModal(false)}
+                    disabled={isCreatingOrder}
+                    className="flex-1 py-3 px-4 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={processPayment}
-                    disabled={isProcessingPayment || !razorpayLoaded}
+                    onClick={createOrderHandler}
+                    disabled={isCreatingOrder || !requirements.trim()}
                     className="flex-1 py-3 px-4 bg-white text-black font-semibold rounded-lg hover:shadow-lg hover:shadow-white/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isProcessingPayment ? 'Processing...' : 
-                     !razorpayLoaded ? 'Loading Payment...' : 
-                     `Pay ₹{getSelectedPlanDetails()?.price}`}
+                    {isCreatingOrder ? 'Creating Order...' : 'Place Order'}
                   </button>
                 </div>
               </div>
