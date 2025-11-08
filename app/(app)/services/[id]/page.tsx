@@ -46,6 +46,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const [requirementLinks, setRequirementLinks] = useState<string[]>([''])
   const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const [orderError, setOrderError] = useState<string | null>(null)
+  const [showCopyNotification, setShowCopyNotification] = useState(false)
 
   useEffect(() => {
     fetchService()
@@ -73,6 +74,18 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
   const toggleLike = () => {
     setIsLiked(!isLiked)
     // TODO: Implement like functionality with backend
+  }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      await navigator.clipboard.writeText(url)
+      setShowCopyNotification(true)
+      setTimeout(() => setShowCopyNotification(false), 3000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      alert('Failed to copy link')
+    }
   }
 
   const handleContinue = () => {
@@ -307,6 +320,21 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Copy Notification */}
+      <AnimatePresence>
+        {showCopyNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-lg flex items-center gap-2"
+          >
+            <FiCheck className="w-5 h-5" />
+            <span className="font-semibold">Link copied to clipboard!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Images and Description */}
@@ -385,13 +413,6 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                   </div>
                   <p className="text-gray-300">{service.freelancer?.bio || 'No bio available'}</p>
                   <div className="flex gap-2 mt-4">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="px-4 py-2 bg-white text-black font-semibold rounded-lg"
-                    >
-                      Contact Me
-                    </motion.button>
                     {userRole === 'client' && (
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -410,7 +431,9 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={handleShare}
                       className="p-2 border border-white/20 text-white rounded-lg hover:bg-white/10"
+                      title="Share service"
                     >
                       <FiShare2 className="w-5 h-5" />
                     </motion.button>
@@ -489,17 +512,6 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                   </div>
                 </div>
               )}
-
-              {/* Contact Section */}
-              <div className="pt-6 border-t border-white/10">
-                <h4 className="font-semibold mb-4">Need help?</h4>
-                <div className="space-y-2">
-                  <button className="w-full py-2 px-4 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2">
-                    <FiMessageSquare className="w-5 h-5" />
-                    Message Seller
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
