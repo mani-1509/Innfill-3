@@ -477,3 +477,132 @@ export async function getUnreadMessageCount(): Promise<{
     };
   }
 }
+
+/**
+ * Schedule chat room to close after 24 hours
+ */
+export async function scheduleChatRoomClosure(orderId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Get chat room by order ID
+    const { data: room, error: roomError } = await supabase
+      .from("chat_rooms")
+      .select("id")
+      .eq("order_id", orderId)
+      .single();
+
+    if (roomError || !room) {
+      return { success: false, error: "Chat room not found" };
+    }
+
+    // Calculate close time (24 hours from now)
+    const closeAt = new Date();
+    closeAt.setHours(closeAt.getHours() + 24);
+
+    // Update chat room with scheduled close time
+    const { error: updateError } = await supabase
+      .from("chat_rooms")
+      .update({
+        scheduled_close_at: closeAt.toISOString(),
+      })
+      .eq("id", room.id);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error scheduling chat room closure:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to schedule chat room closure",
+    };
+  }
+}
+
+/**
+ * Check if chat room should be closed and close it
+ */
+export async function checkAndCloseChatRoom(roomId: string): Promise<{
+  success: boolean;
+  shouldClose: boolean;
+  closeTime?: string;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Get chat room with order details
+    const { data: room, error: roomError } = await supabase
+      .from("chat_rooms")
+      .select(`
+        *,
+        order:orders(
+          id,
+          status,
+          completed_at
+        )
+      `)
+      .eq("id", roomId)
+      .single();
+
+    if (roomError || !room) {
+      return { success: false, shouldClose: false, error: "Chat room not found" };
+    }
+
+    // If room is already inactive, return
+    if (!room.is_active) {
+      return { success: true, shouldClose: true };
+    }
+
+    // Check if order is completed and 24 hours have passed
+    if (room.order && room.order.status === "completed" && room.order.completed_at) {
+      const completedAt = new Date(room.order.completed_at);
+      const now = new Date();
+      const hoursPassed = (now.getTime() - completedAt.getTime()) / (1000 * 60 * 60);
+
+      if (hoursPassed >= 24) {
+        // Close the chat room
+        const { error: closeError } = await supabase
+          .from("chat_rooms")
+          .update({
+            is_active: false,
+            closed_at: now.toISOString(),
+          })
+          .eq("id", roomId);
+
+        if (closeError) {
+          return { success: false, shouldClose: false, error: closeError.message };
+        }
+
+        return { success: true, shouldClose: true };
+      } else {
+        // Calculate when it will close
+        const closeTime = new Date(completedAt.getTime() + 24 * 60 * 60 * 1000);
+        return {
+          success: true,
+          shouldClose: false,
+          closeTime: closeTime.toISOString(),
+        };
+      }
+    }
+
+    return { success: true, shouldClose: false };
+  } catch (error) {
+    console.error("Error checking chat room closure:", error);
+    return {
+      success: false,
+      shouldClose: false,
+      error:
+        error instanceof Error ? error.message : "Failed to check chat room",
+    };
+  }
+}

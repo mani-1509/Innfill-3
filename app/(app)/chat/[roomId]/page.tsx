@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getChatRoom } from "@/lib/actions/chat";
-import { ChatRoom } from "@/components/chat/chat-room";
+import { getChatRoom, checkAndCloseChatRoom } from "@/lib/actions/chat";
+import { ChatRoomWrapper } from "@/components/chat/chat-room-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +142,11 @@ export default async function ChatRoomPage({
               </div>
               
               {/* Chat Messages */}
-              <ChatRoom roomId={roomId} currentUserId={user.id} />
+              <ChatRoomWrapper 
+                roomId={roomId} 
+                currentUserId={user.id}
+                isActive={chatRoom.is_active}
+              />
             </div>
           </div>
 

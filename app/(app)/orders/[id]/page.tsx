@@ -127,6 +127,9 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
 
+  // Chat closure notification state
+  const [showChatClosureNotice, setShowChatClosureNotice] = useState(false)
+
   useEffect(() => {
     fetchOrderDetails()
     fetchChatRoom()
@@ -307,6 +310,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       setActionError(result.error)
     } else {
       await fetchOrderDetails()
+      // Show chat closure notification
+      setShowChatClosureNotice(true)
     }
 
     setActionLoading(false)
@@ -441,6 +446,84 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Chat Closure Notice Popup */}
+      <AnimatePresence>
+        {showChatClosureNotice && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowChatClosureNotice(false)}
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md mx-4"
+            >
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-500/20 to-yellow-500/20 p-6 border-b border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-500/20 rounded-full">
+                        <FiAlertCircle className="w-6 h-6 text-orange-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white">Order Completed!</h3>
+                    </div>
+                    <button
+                      onClick={() => setShowChatClosureNotice(false)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      <FiX className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                  <p className="text-gray-300">
+                    The order has been marked as complete. The chat room will automatically close in 24 hours.
+                  </p>
+                  
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <FiClock className="w-4 h-4" />
+                      <span>Chat will remain active for 24 hours</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <FiMessageSquare className="w-4 h-4" />
+                      <span>You can still send messages until then</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-2">
+                    {chatRoomId && (
+                      <Link 
+                        href={`/chat/${chatRoomId}`}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all font-semibold text-center"
+                        onClick={() => setShowChatClosureNotice(false)}
+                      >
+                        Go to Chat
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => setShowChatClosureNotice(false)}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-all"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">

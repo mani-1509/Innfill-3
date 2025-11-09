@@ -471,6 +471,10 @@ export async function completeOrder(orderId: string) {
     spent: order.price,
   })
 
+  // Schedule chat room to close after 24 hours
+  const { scheduleChatRoomClosure } = await import('./chat')
+  await scheduleChatRoomClosure(orderId)
+
   // TODO: Release payment to freelancer
   // TODO: Send notification to freelancer
 
