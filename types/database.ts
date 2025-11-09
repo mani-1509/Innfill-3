@@ -4,6 +4,7 @@ export type PlanTier = 'basic' | 'standard' | 'premium'
 
 export type OrderStatus =
   | 'pending_acceptance'
+  | 'pending_payment'
   | 'accepted'
   | 'in_progress'
   | 'delivered'
@@ -49,6 +50,15 @@ export interface Profile {
   total_earnings: number
   total_orders: number
   rating: number
+  // Payment fields (Razorpay integration)
+  razorpay_account_id: string | null
+  bank_account_number: string | null
+  bank_ifsc: string | null
+  bank_account_holder_name: string | null
+  pan_number: string | null
+  kyc_verified: boolean
+  available_balance: number
+  pending_balance: number
   created_at: string
   updated_at: string
 }
@@ -98,6 +108,12 @@ export interface Order {
   delivery_links: string[] | null
   delivered_at: string | null
   completed_at: string | null
+  // Payment fields
+  payment_deadline: string | null
+  razorpay_order_id: string | null
+  total_amount: number | null
+  platform_commission: number | null
+  gst_amount: number | null
   created_at: string
   updated_at: string
   accept_deadline: string
@@ -145,6 +161,14 @@ export interface Payment {
   payment_method: string | null
   payment_gateway_id: string | null
   status: PaymentStatus
+  // Razorpay fields
+  razorpay_payment_id: string | null
+  razorpay_transfer_id: string | null
+  gateway_fee: number | null
+  payment_captured_at: string | null
+  refund_id: string | null
+  refund_amount: number | null
+  refunded_at: string | null
   created_at: string
 }
 

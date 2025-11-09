@@ -24,6 +24,7 @@ import {
 } from 'react-icons/fi'
 import { motion } from 'framer-motion'
 import { ServiceModal } from '@/components/modals/service-modal'
+import { FinanceSection } from '@/components/profile/finance-section'
 import { 
   getFreelancerServices, 
   deleteService as deleteServiceAction,
@@ -917,10 +918,7 @@ export default function ProfilePage() {
 
             {/* Finance Tab Content */}
             {activeTab === 'finance' && (
-              <div className="text-center">
-                <h2 className="text-white text-4xl font-bold mb-8">FINANCE</h2>
-                <p className="text-gray-400 text-lg">Financial information coming soon...</p>
-              </div>
+              <FinanceSection userId={profile.id} />
             )}
 
             {/* Application Tab Content */}

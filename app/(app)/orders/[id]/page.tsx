@@ -31,7 +31,12 @@ import {
   FiTrash2,
   FiMessageSquare,
   FiX,
+  FiDollarSign,
+  FiCreditCard,
 } from 'react-icons/fi'
+import { PaymentStatusBanner } from '@/components/payment-status-banner'
+import { PaymentCheckoutModal } from '@/components/modals/payment-checkout-modal'
+import { calculateOrderAmounts } from '@/lib/utils/payment-calculations'
 
 interface OrderDetailPageProps {
   params: Promise<{
@@ -41,6 +46,7 @@ interface OrderDetailPageProps {
 
 type OrderStatus =
   | 'pending_acceptance'
+  | 'pending_payment'
   | 'accepted'
   | 'in_progress'
   | 'delivered'
@@ -89,6 +95,10 @@ interface Order {
   delivery_files: string[] | null
   delivery_links: string[] | null
   accept_deadline: string
+  payment_deadline?: string
+  total_amount?: number
+  platform_commission?: number
+  gst_amount?: number
   created_at: string
   delivered_at?: string
   completed_at?: string
@@ -129,6 +139,9 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   // Chat closure notification state
   const [showChatClosureNotice, setShowChatClosureNotice] = useState(false)
+
+  // Payment modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   useEffect(() => {
     fetchOrderDetails()
@@ -547,6 +560,18 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           </div>
         )}
 
+        {/* Payment Status Banner */}
+        {order.status === 'pending_payment' && order.payment_deadline && (
+          <div className="mb-6">
+            <PaymentStatusBanner
+              orderId={order.id}
+              paymentDeadline={order.payment_deadline}
+              isClient={userRole === 'client'}
+              onPayClick={() => setShowPaymentModal(true)}
+            />
+          </div>
+        )}
+
         {/* Status Timeline */}
         {order.status !== 'cancelled' && (
           <div className="mb-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
@@ -624,6 +649,61 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 </div>
               </div>
             </div>
+
+            {/* Payment Breakdown */}
+            {(order.status === 'pending_payment' || order.total_amount) && (
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <FiDollarSign className="w-6 h-6 text-green-400" />
+                  <h3 className="text-lg font-semibold">Payment Details</h3>
+                </div>
+
+                {(() => {
+                  const amounts = calculateOrderAmounts(parseFloat(order.price))
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-gray-300">
+                        <span>Service Price</span>
+                        <span>₹{amounts.servicePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-300 text-sm">
+                        <span className="text-gray-400">GST (18% on 14% commission)</span>
+                        <span className="text-gray-400">₹{amounts.gstAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="h-px bg-white/10 my-2" />
+                      <div className="flex justify-between text-white font-semibold text-lg">
+                        <span>Total Amount (Client Pays)</span>
+                        <span className="text-green-400">₹{amounts.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+
+                      {userRole === 'freelancer' && (
+                        <div className="mt-4 pt-4 border-t border-white/10">
+                          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                            <p className="text-sm text-gray-300 mb-2">Your Earnings:</p>
+                            <p className="text-2xl font-bold text-green-400">₹{amounts.freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Service price minus 14% platform commission (₹{amounts.platformCommission.toFixed(2)})
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {order.status === 'pending_payment' && userRole === 'client' && (
+                        <div className="mt-4">
+                          <button
+                            onClick={() => setShowPaymentModal(true)}
+                            className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2"
+                          >
+                            <FiCreditCard className="w-5 h-5" />
+                            Pay Now
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
 
             {/* Requirements */}
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
@@ -854,7 +934,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                   <p className="text-lg font-semibold text-green-400 mb-1">Order Completed</p>
                   <p className="text-sm text-gray-400">
                     {userRole === 'freelancer' 
-                      ? 'Payment has been released to you'
+                      ? `Payment of ₹${calculateOrderAmounts(parseFloat(order.price)).freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} released to you`
                       : 'Thank you for your business!'}
                   </p>
                 </div>
@@ -869,7 +949,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                   <p className="text-lg font-semibold text-red-400 mb-1">Order Cancelled</p>
                   <p className="text-sm text-gray-400">
                     {userRole === 'client' 
-                      ? 'Refund has been processed'
+                      ? `Refund of ₹${parseFloat(order.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })} processed (GST non-refundable)`
                       : 'This order has been cancelled'}
                   </p>
                 </div>
@@ -895,6 +975,15 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 <>
                   {order.status === 'pending_acceptance' && (
                     <>
+                      <div className="mb-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <p className="text-xs text-gray-400 mb-1">Your Earnings:</p>
+                        <p className="text-lg font-bold text-blue-400">
+                          ₹{calculateOrderAmounts(parseFloat(order.price)).freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Service price (₹{parseFloat(order.price).toLocaleString('en-IN')}) minus 14% platform commission
+                        </p>
+                      </div>
                       <button
                         onClick={handleAccept}
                         disabled={actionLoading}
@@ -910,6 +999,22 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                         {actionLoading ? 'Processing...' : 'Decline Order'}
                       </button>
                     </>
+                  )}
+
+                  {order.status === 'pending_payment' && (
+                    <div className="text-center py-4">
+                      <div className="mb-2">
+                        <FiClock className="w-8 h-8 text-yellow-400 mx-auto" />
+                      </div>
+                      <p className="text-sm text-gray-400">Waiting for client payment</p>
+                      <p className="text-xs text-gray-500 mt-1">Client has 48 hours to complete payment</p>
+                      <div className="mt-3 p-3 bg-white/5 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-1">You'll earn:</p>
+                        <p className="text-lg font-bold text-green-400">
+                          ₹{calculateOrderAmounts(parseFloat(order.price)).freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                    </div>
                   )}
 
                   {order.status === 'accepted' && (
@@ -965,10 +1070,16 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                           Request Revision ({order.revisions_allowed - order.revisions_used} left)
                         </button>
                       )}
+                      <div className="mt-3 p-3 bg-white/5 rounded-lg">
+                        <p className="text-xs text-gray-400">Upon completion:</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Freelancer receives ₹{calculateOrderAmounts(parseFloat(order.price)).freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
                     </>
                   )}
 
-                  {(order.status === 'pending_acceptance' || order.status === 'accepted') && (
+                  {(order.status === 'pending_acceptance' || order.status === 'accepted' || order.status === 'in_progress') && (
                     <button
                       onClick={() => setShowCancelModal(true)}
                       disabled={actionLoading}
@@ -1193,8 +1304,27 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
               <div className="space-y-4">
                 <p className="text-gray-400 text-sm">
-                  Are you sure you want to cancel this order? You'll receive a refund minus the platform fee.
+                  Are you sure you want to cancel this order?
                 </p>
+                
+                {order.status === 'accepted' || order.status === 'in_progress' ? (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                    <p className="text-sm text-blue-400 font-semibold mb-1">Refund Information:</p>
+                    <p className="text-xs text-gray-400">
+                      You'll receive ₹{parseFloat(order.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })} back (service price only)
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      GST amount (₹{calculateOrderAmounts(parseFloat(order.price)).gstAmount.toFixed(2)}) is non-refundable
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                    <p className="text-sm text-green-400 font-semibold mb-1">No Payment Made</p>
+                    <p className="text-xs text-gray-400">
+                      Order can be cancelled without any charges
+                    </p>
+                  </div>
+                )}
 
                 <textarea
                   value={cancelReason}
@@ -1231,6 +1361,23 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Payment Checkout Modal */}
+      {showPaymentModal && order && (
+        <PaymentCheckoutModal
+          orderId={order.id}
+          servicePrice={parseFloat(order.price)}
+          serviceName={order.service.title}
+          freelancerName={order.freelancer.username}
+          open={showPaymentModal}
+          onOpenChange={(open) => {
+            setShowPaymentModal(open)
+            if (!open) {
+              fetchOrderDetails()
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

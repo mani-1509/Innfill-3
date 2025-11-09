@@ -2,13 +2,15 @@
  * Order-related utility functions
  */
 
-// Platform fee percentage (from environment)
-const PLATFORM_FEE_PERCENTAGE = parseFloat(process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE || '15')
-
 /**
- * Calculate platform fee and amounts
+ * @deprecated Use calculateOrderAmounts from payment-calculations.ts instead
+ * This function uses the old payment model and should not be used for new code.
+ * 
+ * OLD MODEL: Simple 15% platform fee
+ * NEW MODEL: 14% commission + 18% GST on commission
  */
 export function calculateFees(price: number) {
+  const PLATFORM_FEE_PERCENTAGE = 15
   const platformFee = (price * PLATFORM_FEE_PERCENTAGE) / 100
   const freelancerAmount = price - platformFee
   
@@ -20,7 +22,7 @@ export function calculateFees(price: number) {
 }
 
 /**
- * Calculate refund amount (price minus platform fee)
+ * @deprecated Use calculateRefundAmount from payment-calculations.ts instead
  */
 export function calculateRefund(price: number) {
   const { platformFee } = calculateFees(price)

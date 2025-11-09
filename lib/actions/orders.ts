@@ -3,7 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { calculateFees, calculateAcceptDeadline } from '@/lib/utils/order-utils'
+import { calculateAcceptDeadline } from '@/lib/utils/order-utils'
+import { calculateOrderAmounts, calculateRefundAmount } from '@/lib/utils/payment-calculations'
+import { processRefund, transferToFreelancer } from './payments'
 
 /**
  * Generate a signed URL for downloading a file from Supabase Storage
@@ -90,6 +92,9 @@ export async function createOrder(data: {
     return { error: 'Invalid plan tier' }
   }
 
+  // Calculate payment amounts
+  const paymentAmounts = calculateOrderAmounts(price)
+
   // Calculate accept deadline (48 hours from now)
   const acceptDeadline = calculateAcceptDeadline()
 
@@ -105,6 +110,9 @@ export async function createOrder(data: {
       requirement_files: data.requirementFiles || [],
       requirement_links: data.requirementLinks || [],
       price,
+      total_amount: paymentAmounts.totalAmount,
+      platform_commission: paymentAmounts.platformCommission,
+      gst_amount: paymentAmounts.gstAmount,
       delivery_days: deliveryDays,
       revisions_allowed: revisionsAllowed,
       revisions_used: 0,
@@ -155,11 +163,16 @@ export async function acceptOrder(orderId: string) {
     return { error: 'Order is not pending acceptance' }
   }
 
-  // Update order status
+  // Calculate payment deadline (48 hours from now)
+  const paymentDeadline = new Date()
+  paymentDeadline.setHours(paymentDeadline.getHours() + 48)
+
+  // Update order status to pending_payment (client needs to pay within 48 hours)
   const { error: updateError } = await supabase
     .from('orders')
     .update({
-      status: 'accepted',
+      status: 'pending_payment',
+      payment_deadline: paymentDeadline.toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', orderId)
@@ -459,27 +472,35 @@ export async function completeOrder(orderId: string) {
     return { error: updateError.message }
   }
 
-  // Update freelancer stats
+  // Update freelancer stats with actual earnings (service price minus 14% commission)
+  const freelancerEarnings = calculateOrderAmounts(order.price).freelancerAmount
   await supabase.rpc('increment_freelancer_stats', {
     freelancer_id: order.freelancer_id,
-    earnings: order.price,
+    earnings: freelancerEarnings,
   })
 
-  // Update client stats
+  // Update client stats with total amount paid (service price + GST on commission)
   await supabase.rpc('increment_client_stats', {
     client_id: order.client_id,
-    spent: order.price,
+    spent: order.total_amount,
   })
 
   // Schedule chat room to close after 24 hours
   const { scheduleChatRoomClosure } = await import('./chat')
   await scheduleChatRoomClosure(orderId)
 
-  // TODO: Release payment to freelancer
+  // Transfer payment to freelancer
+  const transferResult = await transferToFreelancer(orderId)
+  if (!transferResult.success) {
+    console.error('Failed to transfer payment to freelancer:', transferResult.error)
+    // Don't fail order completion if transfer fails - it will be retried later
+  }
+
   // TODO: Send notification to freelancer
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
+  revalidatePath('/earnings')
   return { success: true }
 }
 
@@ -512,13 +533,12 @@ export async function cancelOrder(orderId: string, reason?: string) {
   }
 
   // Can only cancel certain statuses
-  if (!['pending_acceptance', 'accepted', 'in_progress'].includes(order.status)) {
+  if (!['pending_acceptance', 'pending_payment', 'accepted', 'in_progress'].includes(order.status)) {
     return { error: 'Cannot cancel order at this stage' }
   }
 
-  // Calculate refund (100% minus platform fee)
-  const fees = calculateFees(order.price)
-  const refundAmount = order.price - fees.platformFee
+  // Check if payment was made (status is accepted or in_progress means payment was completed)
+  const paymentMade = ['accepted', 'in_progress'].includes(order.status)
 
   // Update order status
   const { error: updateError } = await supabase
@@ -533,12 +553,24 @@ export async function cancelOrder(orderId: string, reason?: string) {
     return { error: updateError.message }
   }
 
-  // TODO: Process refund (price - platform fee)
+  // Process refund if payment was made
+  if (paymentMade) {
+    const refundResult = await processRefund(orderId, reason || 'Order cancelled by client')
+    if (!refundResult.success) {
+      console.error('Failed to process refund:', refundResult.error)
+      // Don't fail cancellation if refund fails - it can be processed manually
+    }
+  }
+
   // TODO: Send notification to freelancer
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
-  return { success: true, refundAmount }
+  return { 
+    success: true,
+    refundProcessed: paymentMade,
+    refundAmount: paymentMade ? (await processRefund(orderId, reason || 'Order cancelled by client')).refundAmount : undefined
+  }
 }
 
 /**

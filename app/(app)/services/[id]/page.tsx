@@ -7,6 +7,7 @@ import { getService } from '@/lib/actions/services'
 import { createOrder } from '@/lib/actions/orders'
 import { uploadOrderFiles } from '@/lib/utils/upload-utils'
 import { createClient } from '@/lib/supabase/client'
+import { calculateOrderAmounts } from '@/lib/utils/payment-calculations'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FiClock,
@@ -20,6 +21,7 @@ import {
   FiTrash2,
   FiFile,
   FiAlertCircle,
+  FiInfo,
 } from 'react-icons/fi'
 
 interface ServiceDetailPageProps {
@@ -206,11 +208,6 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
     } finally {
       setIsCreatingOrder(false)
     }
-  }
-
-  const calculatePlatformFee = (price: number) => {
-    const feePercentage = parseFloat(process.env.NEXT_PUBLIC_PLATFORM_FEE_PERCENTAGE || '15')
-    return (price * feePercentage) / 100
   }
 
   const getSelectedPlanDetails = () => {
@@ -674,29 +671,56 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
                 </div>
 
                 {/* Price Breakdown */}
-                <div className="bg-white/5 rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold mb-3">Price Breakdown</h4>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Service Price</span>
-                    <span>₹{getSelectedPlanDetails()?.price}</span>
+                <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FiInfo className="w-5 h-5 text-green-400" />
+                    <h4 className="font-semibold text-green-400">Payment Breakdown</h4>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Platform Fee (15%)</span>
-                    <span>₹{calculatePlatformFee(parseFloat(getSelectedPlanDetails()?.price || '0')).toFixed(2)}</span>
-                  </div>
-                  <div className="pt-2 border-t border-white/10 flex justify-between font-bold">
-                    <span>Total</span>
-                    <span className="text-green-400">
-                      ₹{(
-                        parseFloat(getSelectedPlanDetails()?.price || '0') +
-                        calculatePlatformFee(parseFloat(getSelectedPlanDetails()?.price || '0'))
-                      ).toFixed(2)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    <FiAlertCircle className="inline w-3 h-3 mr-1" />
-                    Payment will be processed after the freelancer accepts your order
-                  </p>
+
+                  {(() => {
+                    const servicePrice = parseFloat(getSelectedPlanDetails()?.price || '0')
+                    const amounts = calculateOrderAmounts(servicePrice)
+                    
+                    return (
+                      <>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-300">Service Price</span>
+                            <span className="text-white font-semibold">₹{amounts.servicePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-400 pl-2">+ GST (18% on 14% commission)</span>
+                            <span className="text-gray-400">₹{amounts.gstAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-green-500/20 my-3" />
+
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-lg">Total Amount</span>
+                          <span className="text-green-400 font-bold text-2xl">
+                            ₹{amounts.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        <div className="bg-white/5 rounded-lg p-3 mt-4 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <FiAlertCircle className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                            <div className="text-xs text-gray-300">
+                              <p className="font-semibold text-blue-400 mb-1">Payment Process:</p>
+                              <ul className="space-y-1 list-disc list-inside text-gray-400">
+                                <li>Order created without payment</li>
+                                <li>Freelancer has 48 hours to accept</li>
+                                <li>You pay only after acceptance</li>
+                                <li>48-hour payment window after acceptance</li>
+                                <li>Freelancer receives ₹{amounts.freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (service price minus 14% commission)</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )
+                  })()}
                 </div>
 
                 {/* Error Display */}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getUserOrders } from '@/lib/actions/orders'
+import { calculateOrderAmounts } from '@/lib/utils/payment-calculations'
 import { motion } from 'framer-motion'
 import {
   FiClock,
@@ -16,6 +17,7 @@ import {
 
 type OrderStatus =
   | 'pending_acceptance'
+  | 'pending_payment'
   | 'accepted'
   | 'in_progress'
   | 'delivered'
@@ -46,6 +48,11 @@ interface Order {
   created_at: string
   delivered_at?: string
   completed_at?: string
+  // Payment fields
+  payment_deadline?: string
+  total_amount?: number
+  platform_commission?: number
+  gst_amount?: number
 }
 
 const statusConfig = {
@@ -55,6 +62,13 @@ const statusConfig = {
     bg: 'bg-yellow-400/10',
     border: 'border-yellow-400/20',
     icon: FiClock,
+  },
+  pending_payment: {
+    label: 'Awaiting Payment',
+    color: 'text-orange-400',
+    bg: 'bg-orange-400/10',
+    border: 'border-orange-400/20',
+    icon: FiAlertCircle,
   },
   accepted: {
     label: 'Accepted',
@@ -134,7 +148,7 @@ export default function OrdersPage() {
     // Filter by tab
     if (activeTab === 'active') {
       filtered = filtered.filter((order) =>
-        ['pending_acceptance', 'accepted', 'in_progress', 'delivered', 'revision_requested'].includes(order.status)
+        ['pending_acceptance', 'pending_payment', 'accepted', 'in_progress', 'delivered', 'revision_requested'].includes(order.status)
       )
     } else if (activeTab === 'completed') {
       filtered = filtered.filter((order) => order.status === 'completed')
@@ -259,7 +273,7 @@ export default function OrdersPage() {
               key: 'active',
               label: 'Active',
               count: orders.filter((o) =>
-                ['pending_acceptance', 'accepted', 'in_progress', 'delivered', 'revision_requested'].includes(o.status)
+                ['pending_acceptance', 'pending_payment', 'accepted', 'in_progress', 'delivered', 'revision_requested'].includes(o.status)
               ).length,
             },
             {
@@ -371,11 +385,65 @@ export default function OrdersPage() {
                           <span>Plan:</span>
                           <span className="text-white capitalize">{order.plan_tier}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span>Price:</span>
-                          <span className="text-green-400 font-bold">₹{order.price}</span>
-                        </div>
+                        
+                        {/* Payment Information */}
+                        {order.status === 'pending_payment' && userRole === 'client' && order.total_amount ? (
+                          <>
+                            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                              <span className="font-semibold text-orange-400">Amount to Pay:</span>
+                              <span className="text-orange-400 font-bold text-lg">₹{order.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span>Service + GST on commission</span>
+                              <span className="text-gray-500">Base: ₹{parseFloat(order.price).toLocaleString('en-IN')}</span>
+                            </div>
+                          </>
+                        ) : order.status === 'pending_payment' && userRole === 'freelancer' ? (
+                          <>
+                            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                              <span className="font-semibold text-yellow-400">Awaiting Payment</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-gray-400">You'll earn:</span>
+                              <span className="text-green-400 font-semibold">₹{(() => {
+                                const amounts = calculateOrderAmounts(parseFloat(order.price))
+                                return amounts.freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
+                              })()}</span>
+                            </div>
+                          </>
+                        ) : order.total_amount && ['completed', 'in_progress', 'delivered', 'accepted'].includes(order.status) ? (
+                          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                            <span>{userRole === 'client' ? 'Paid:' : 'Earnings:'}</span>
+                            <span className="text-green-400 font-bold">
+                              ₹{userRole === 'client' 
+                                ? order.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                : (() => {
+                                    const amounts = calculateOrderAmounts(parseFloat(order.price))
+                                    return amounts.freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })
+                                  })()
+                              }
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span>Price:</span>
+                            <span className="text-green-400 font-bold">₹{parseFloat(order.price).toLocaleString('en-IN')}</span>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Pay Now Button */}
+                      {order.status === 'pending_payment' && userRole === 'client' && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            window.location.href = `/orders/${order.id}`
+                          }}
+                          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold py-3 rounded-lg hover:shadow-lg hover:shadow-orange-500/50 transition-all duration-300"
+                        >
+                          Pay Now - ₹{order.total_amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </button>
+                      )}
 
                       {/* Timeline */}
                       <div className="pt-4 border-t border-white/10 space-y-2 text-xs text-gray-500">
@@ -392,6 +460,18 @@ export default function OrdersPage() {
                                 : 'text-yellow-400'
                             }`}>
                               {calculateTimeRemaining(order.accept_deadline)}
+                            </span>
+                          </div>
+                        )}
+                        {order.status === 'pending_payment' && order.payment_deadline && (
+                          <div className="flex items-center justify-between">
+                            <span>Payment deadline:</span>
+                            <span className={`font-semibold ${
+                              calculateTimeRemaining(order.payment_deadline) === 'Expired'
+                                ? 'text-red-400'
+                                : 'text-orange-400'
+                            }`}>
+                              {calculateTimeRemaining(order.payment_deadline)}
                             </span>
                           </div>
                         )}
