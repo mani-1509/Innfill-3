@@ -146,12 +146,31 @@ export function FinanceSection({ userId }: FinanceSectionProps) {
               </div>
               
               {!bankDetails.kycVerified && (
-                <div className="mt-4 text-sm text-gray-300">
-                  <p className="mb-2">Your bank details are under review. This usually takes 1-2 business days.</p>
-                  <ul className="space-y-1 text-xs text-gray-400">
-                    <li>• Ensure all details are accurate</li>
-                    <li>• PAN and bank account must be linked</li>
-                    <li>• Account holder name must match PAN</li>
+                <div className="mt-4 p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl">
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="flex-shrink-0 w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                      <span className="text-lg">⏳</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-yellow-300">Under Review</p>
+                      <p className="text-xs text-yellow-200/70 mt-1">
+                        Your bank details are being verified. This usually takes 1-2 business days.
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2 ml-11 text-xs text-yellow-200/60">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+                      Ensure all details are accurate
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+                      PAN and bank account must be linked
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+                      Account holder name must match PAN
+                    </li>
                   </ul>
                 </div>
               )}

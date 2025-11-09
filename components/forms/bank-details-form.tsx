@@ -91,10 +91,7 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
       setVerificationStep('🔍 Creating payment gateway contact...')
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      setVerificationStep('🔍 Verifying bank account...')
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      setVerificationStep('💸 Performing penny drop validation...')
+      setVerificationStep('✅ Verifying bank account with Razorpay...')
       
       const result = await updateBankDetails({
         accountNumber: data.accountNumber,
@@ -125,16 +122,46 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Info Banner */}
-        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-          <p className="text-sm text-blue-300 mb-2 font-medium">
-            🔐 Bank Account Verification Process:
-          </p>
-          <ul className="text-xs text-blue-200/80 space-y-1 ml-4">
-            <li>✓ IFSC code verification with bank database</li>
-            <li>✓ Account format validation</li>
-            <li>✓ Fund account creation with Razorpay</li>
-            <li>✓ Penny drop validation (₹1 test transfer)</li>
-          </ul>
+        <div className="relative overflow-hidden p-5 bg-gradient-to-br from-yellow-500/10 via-orange-600/5 to-amber-500/10 border border-yellow-500/20 rounded-xl backdrop-blur-sm">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl"></div>
+          <div className="relative">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-lg">⚠️</span>
+              </div>
+              <div>
+                <p className="text-sm text-yellow-300 font-semibold">
+                  Bank Account Verification
+                </p>
+                <p className="text-xs text-yellow-200/60 mt-1">
+                  Limited verification - full check on first payout
+                </p>
+              </div>
+            </div>
+            <ul className="text-xs text-yellow-200/70 space-y-2 ml-11">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                <span className="text-green-300/80">IFSC verified with RBI database</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                <span className="text-green-300/80">Account format validated</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+                <span className="text-yellow-300/80">Account number NOT verified with bank</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+                <span className="text-yellow-300/80">Will be verified on first payout attempt</span>
+              </li>
+            </ul>
+            <div className="mt-3 ml-11 p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+              <p className="text-[10px] text-yellow-200/60">
+                💡 <strong>Important:</strong> Enter correct details. Invalid account numbers will cause payout failures.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -263,13 +290,21 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
 
         {/* Verification Progress */}
         {verificationStep && (
-          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-            <div className="flex items-center gap-3">
-              <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <p className="text-blue-300 text-sm font-medium">{verificationStep}</p>
+          <div className="relative overflow-hidden p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl backdrop-blur-sm">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 animate-pulse"></div>
+            <div className="relative flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-blue-300 text-sm font-medium">{verificationStep}</p>
+                <div className="h-1 bg-blue-500/10 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-[shimmer_2s_ease-in-out_infinite]" style={{ width: '60%' }}></div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -307,26 +342,41 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
         </div>
 
         {/* Security Info */}
-        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <p className="font-medium text-green-300 mb-2 text-sm">🔒 Your information is secure</p>
-          <ul className="space-y-1.5 text-xs text-gray-400">
-            <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span>
-              <span>Bank details are encrypted and stored securely</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span>
-              <span>Used only for transferring your earnings</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span>
-              <span>We never store CVV or card details</span>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span>
-              <span>Complies with RBI and IT Act guidelines</span>
-            </li>
-          </ul>
+        <div className="relative overflow-hidden p-5 bg-gradient-to-br from-green-500/10 via-emerald-600/5 to-teal-500/10 border border-green-500/20 rounded-xl backdrop-blur-sm">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-3xl"></div>
+          <div className="relative">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-lg">🔒</span>
+              </div>
+              <div>
+                <p className="text-sm text-green-300 font-semibold">
+                  Your Information is Secure
+                </p>
+                <p className="text-xs text-green-200/60 mt-1">
+                  Bank-grade encryption & compliance
+                </p>
+              </div>
+            </div>
+            <ul className="space-y-2 ml-11 text-xs text-green-200/70">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                Bank details are encrypted and stored securely
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                Used only for transferring your earnings
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                We never store CVV or card details
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                Complies with RBI and IT Act guidelines
+              </li>
+            </ul>
+          </div>
         </div>
       </form>
     </Form>

@@ -76,112 +76,102 @@ async function verifyBankAccountWithRazorpay(data: {
       return { error: '❌ User profile not found' }
     }
 
-    // Step 4: Create or get contact in Razorpay
+    // Step 4: Create or get contact in Razorpay via REST API
     console.log('🔍 Creating Razorpay contact...')
     let contact
     try {
-      contact = await razorpayInstance.contacts.create({
-        name: data.accountHolderName,
-        email: profile.email,
-        type: 'vendor',
-        reference_id: user.id,
-        notes: {
-          username: profile.username,
-        }
+      const contactResponse = await fetch('https://api.razorpay.com/v1/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64')}`,
+        },
+        body: JSON.stringify({
+          name: data.accountHolderName,
+          email: profile.email,
+          type: 'vendor',
+          reference_id: user.id,
+          notes: {
+            username: profile.username,
+          }
+        })
       })
+
+      if (!contactResponse.ok) {
+        const errorData = await contactResponse.json()
+        console.error('Contact creation error:', errorData)
+        return { error: '❌ Failed to create contact with payment gateway' }
+      }
+
+      contact = await contactResponse.json()
       console.log('✅ Contact created:', contact.id)
     } catch (contactError: any) {
       console.error('Contact creation error:', contactError)
       return { error: '❌ Failed to create contact with payment gateway' }
     }
 
-    // Step 5: Create fund account
+    // Step 5: Create fund account via REST API
     console.log('🔍 Creating fund account...')
     let fundAccount
     try {
-      fundAccount = await razorpayInstance.fundAccount.create({
-        contact_id: contact.id,
-        account_type: 'bank_account',
-        bank_account: {
-          name: data.accountHolderName,
-          ifsc: data.ifscCode,
-          account_number: data.accountNumber,
-        }
+      const fundAccountResponse = await fetch('https://api.razorpay.com/v1/fund_accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64')}`,
+        },
+        body: JSON.stringify({
+          contact_id: contact.id,
+          account_type: 'bank_account',
+          bank_account: {
+            name: data.accountHolderName,
+            ifsc: data.ifscCode,
+            account_number: data.accountNumber,
+          }
+        })
       })
+
+      if (!fundAccountResponse.ok) {
+        const errorData = await fundAccountResponse.json()
+        console.error('Fund account creation error:', errorData)
+        
+        // Parse Razorpay errors
+        if (errorData.error) {
+          const desc = errorData.error.description
+          if (desc.includes('IFSC')) {
+            return { error: '❌ Invalid IFSC code rejected by bank gateway' }
+          }
+          if (desc.includes('account')) {
+            return { error: '❌ Invalid account number rejected by bank gateway' }
+          }
+          if (desc.includes('name')) {
+            return { error: '❌ Account holder name format invalid' }
+          }
+          return { error: `❌ ${desc}` }
+        }
+        
+        return { error: '❌ Failed to verify bank account with payment gateway' }
+      }
+
+      fundAccount = await fundAccountResponse.json()
       console.log('✅ Fund account created:', fundAccount.id)
+      
+      // Fund account creation validates IFSC with RBI database
+      // Account number format is validated but NOT verified with actual bank
+      // For full verification (account exists + name match), RazorpayX + penny drop is needed
+      console.log('⚠️ Bank details saved - account number NOT verified with bank')
+      
+      return { 
+        success: true,
+        contactId: contact.id,
+        fundAccountId: fundAccount.id,
+        needsManualVerification: true, // Flag that account number isn't fully verified
+        message: '⚠️ Bank details saved. Account will be verified on first payout attempt.' 
+      }
+      
     } catch (fundError: any) {
       console.error('Fund account creation error:', fundError)
-      
-      // Parse Razorpay errors
-      if (fundError.error) {
-        const desc = fundError.error.description
-        if (desc.includes('IFSC')) {
-          return { error: '❌ Invalid IFSC code rejected by bank gateway' }
-        }
-        if (desc.includes('account')) {
-          return { error: '❌ Invalid account number rejected by bank gateway' }
-        }
-        if (desc.includes('name')) {
-          return { error: '❌ Account holder name format invalid' }
-        }
-        return { error: `❌ ${desc}` }
-      }
-      
       return { error: '❌ Failed to verify bank account with payment gateway' }
-    }
-
-    // Step 6: Perform penny drop validation (₹1 verification)
-    console.log('🔍 Performing penny drop validation...')
-    try {
-      const validation = await razorpayInstance.fundAccount.validate({
-        fund_account_id: fundAccount.id,
-        amount: 100, // ₹1 in paise
-        currency: 'INR',
-        notes: {
-          purpose: 'Account Verification',
-          user_id: user.id,
-        }
-      })
-      
-      console.log('✅ Penny drop validation initiated:', validation.id)
-      console.log('   Status:', validation.status)
-      
-      // Validation statuses: created, completed, failed
-      if (validation.status === 'failed') {
-        return { 
-          error: '❌ Bank account validation failed. Please verify your account details with your bank.' 
-        }
-      }
-      
-      // Check if name matches (if available in response)
-      if (validation.results && validation.results.account_status === 'inactive') {
-        return { error: '❌ Bank account is inactive. Please use an active account.' }
-      }
-
-      console.log('✅ Bank account verified successfully!')
-      
-      return { 
-        success: true,
-        contactId: contact.id,
-        fundAccountId: fundAccount.id,
-        validationId: validation.id,
-        message: '✅ Bank account verified successfully with penny drop validation' 
-      }
-      
-    } catch (validationError: any) {
-      console.error('Penny drop validation error:', validationError)
-      
-      // Even if penny drop fails, we have the fund account created
-      // Store the fund account details and mark for manual review
-      console.log('⚠️ Penny drop failed but fund account created')
-      
-      return { 
-        success: true,
-        contactId: contact.id,
-        fundAccountId: fundAccount.id,
-        needsManualReview: true,
-        message: '⚠️ Bank details saved but require manual verification' 
-      }
     }
     
   } catch (error: any) {
@@ -262,12 +252,9 @@ export async function updateBankDetails(data: {
       updateData.razorpay_account_id = verificationResult.fundAccountId
     }
 
-    // Set KYC status based on verification result
-    if (verificationResult.needsManualReview) {
-      updateData.kyc_verified = false
-    } else {
-      updateData.kyc_verified = true // Penny drop successful
-    }
+    // Mark as pending verification (IFSC verified, but account number not confirmed with bank)
+    // Will be fully verified on first successful payout
+    updateData.kyc_verified = false
 
     const { error: updateError } = await supabase
       .from('profiles')
@@ -283,8 +270,8 @@ export async function updateBankDetails(data: {
     
     return { 
       success: true, 
-      message: verificationResult.message || 'Bank details saved successfully',
-      verified: !verificationResult.needsManualReview
+      message: verificationResult.message || 'Bank details saved. Will be verified on first payout.',
+      needsVerification: true
     }
   } catch (error) {
     console.error('Error in updateBankDetails:', error)
@@ -622,43 +609,106 @@ export async function transferToFreelancer(orderId: string) {
     // Calculate transfer amount
     const amounts = calculateOrderAmounts(order.price)
 
-    // TODO: Create Razorpay transfer using Route API
-    // For now, simulate transfer in test mode
-    const transferId = `transfer_test_${Date.now()}_${orderId.substring(0, 8)}`
-
-    // Update payment record
-    const { error: paymentUpdateError } = await supabase
-      .from('payments')
-      .update({
-        transferred_to_freelancer: true,
-        razorpay_transfer_id: transferId,
-        updated_at: new Date().toISOString(),
+    // Create Razorpay transfer (payout to freelancer)
+    console.log('🔄 Initiating transfer to freelancer...')
+    
+    try {
+      // In production, use Razorpay Payouts API
+      // For now, validate account before marking as transferred
+      const transferResponse = await fetch('https://api.razorpay.com/v1/payouts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64')}`,
+        },
+        body: JSON.stringify({
+          account_number: process.env.RAZORPAY_ACCOUNT_NUMBER || '2323230000000000', // Your Razorpay account
+          fund_account_id: order.freelancer.razorpay_account_id,
+          amount: Math.round(amounts.freelancerAmount * 100), // Convert to paise
+          currency: 'INR',
+          mode: 'IMPS', // IMPS/NEFT/RTGS
+          purpose: 'payout',
+          queue_if_low_balance: true,
+          reference_id: `order_${orderId}`,
+          narration: `Earnings for order ${orderId.substring(0, 8)}`,
+          notes: {
+            order_id: orderId,
+            service_id: order.service_plan_id,
+          }
+        })
       })
-      .eq('id', payment.id)
 
-    if (paymentUpdateError) {
-      console.error('Error updating payment record:', paymentUpdateError)
-      return { error: 'Failed to record transfer' }
-    }
+      if (!transferResponse.ok) {
+        const errorData = await transferResponse.json()
+        console.error('Transfer failed:', errorData)
+        
+        // If transfer fails, likely due to invalid account
+        // Keep kyc_verified as false for freelancer
+        return { 
+          error: `Transfer failed: ${errorData.error?.description || 'Invalid bank account details'}. Please ask freelancer to update bank details.` 
+        }
+      }
 
-    // Move from pending to available balance
-    const { error: releaseError } = await supabase.rpc('release_pending_balance', {
-      p_freelancer_id: order.freelancer_id,
-      p_amount: amounts.freelancerAmount,
-    })
+      const transferData = await transferResponse.json()
+      console.log('✅ Transfer initiated:', transferData.id)
 
-    if (releaseError) {
-      console.error('Error releasing pending balance:', releaseError)
-      return { error: 'Failed to update freelancer balance' }
-    }
+      // Transfer successful = bank account is valid!
+      // Automatically verify the account
+      if (transferData.status === 'processing' || transferData.status === 'processed') {
+        console.log('✅ Bank account verified through successful transfer!')
+        
+        // Update freelancer's KYC status to verified
+        await supabase
+          .from('profiles')
+          .update({ 
+            kyc_verified: true,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', order.freelancer_id)
+      }
 
-    revalidatePath(`/orders/${orderId}`)
-    revalidatePath('/earnings')
+      // Update payment record
+      const { error: paymentUpdateError } = await supabase
+        .from('payments')
+        .update({
+          transferred_to_freelancer: true,
+          razorpay_transfer_id: transferData.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', payment.id)
 
-    return {
-      success: true,
-      message: 'Payment transferred to freelancer successfully',
-      transferId,
+      if (paymentUpdateError) {
+        console.error('Error updating payment record:', paymentUpdateError)
+        return { error: 'Failed to record transfer' }
+      }
+
+      // Move from pending to available balance
+      const { error: releaseError } = await supabase.rpc('release_pending_balance', {
+        p_freelancer_id: order.freelancer_id,
+        p_amount: amounts.freelancerAmount,
+      })
+
+      if (releaseError) {
+        console.error('Error releasing pending balance:', releaseError)
+        return { error: 'Failed to update freelancer balance' }
+      }
+
+      revalidatePath(`/orders/${orderId}`)
+      revalidatePath('/earnings')
+      revalidatePath('/profile')
+
+      return {
+        success: true,
+        message: 'Payment transferred to freelancer successfully. Bank account verified!',
+        transferId: transferData.id,
+        accountVerified: true,
+      }
+      
+    } catch (transferError: any) {
+      console.error('Transfer error:', transferError)
+      return { 
+        error: 'Failed to transfer payment. Please check bank details and try again.' 
+      }
     }
   } catch (error) {
     console.error('Error in transferToFreelancer:', error)
@@ -705,57 +755,81 @@ export async function processRefund(orderId: string, reason: string) {
     const gstAmount = order.gst_amount || 0
     const refundCalc = calculateRefundAmount(totalAmount, platformCommission, gstAmount)
 
-    // TODO: Create Razorpay refund
-    // For now, simulate refund in test mode
-    const refundId = `refund_test_${Date.now()}_${orderId.substring(0, 8)}`
-
-    // Update payment with refund details
-    const { error: refundError } = await supabase
-      .from('payments')
-      .update({
-        refund_status: 'processed',
-        refund_amount: refundCalc.refundAmount,
-        razorpay_refund_id: refundId,
-        updated_at: new Date().toISOString(),
+    // Create Razorpay refund
+    console.log('🔄 Initiating refund...')
+    
+    try {
+      const Razorpay = require('razorpay')
+      const razorpay = new Razorpay({
+        key_id: RAZORPAY_KEY_ID,
+        key_secret: RAZORPAY_KEY_SECRET,
       })
-      .eq('id', payment.id)
 
-    if (refundError) {
-      console.error('Error updating payment with refund:', refundError)
-      return { error: 'Failed to process refund' }
-    }
-
-    // Update order status to cancelled
-    const { error: orderUpdateError } = await supabase
-      .from('orders')
-      .update({
-        status: 'cancelled',
-        updated_at: new Date().toISOString(),
+      // Create refund using Razorpay SDK
+      const refund = await razorpay.payments.refund(payment.razorpay_payment_id, {
+        amount: Math.round(refundCalc.refundAmount * 100), // Convert to paise
+        notes: {
+          order_id: orderId,
+          reason: reason,
+        }
       })
-      .eq('id', orderId)
 
-    if (orderUpdateError) {
-      console.error('Error updating order status:', orderUpdateError)
-    }
+      console.log('✅ Refund initiated:', refund.id)
 
-    // If payment was already in freelancer's pending balance, remove it
-    if (payment.transferred_to_freelancer === false) {
-      const amounts = calculateOrderAmounts(order.price)
-      await supabase.rpc('update_freelancer_balance', {
-        p_freelancer_id: order.freelancer_id,
-        p_amount: -amounts.freelancerAmount, // Negative to subtract
-        p_balance_type: 'pending',
-      })
-    }
+      // Update payment with refund details
+      const { error: refundError } = await supabase
+        .from('payments')
+        .update({
+          refund_status: 'processed',
+          refund_amount: refundCalc.refundAmount,
+          razorpay_refund_id: refund.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', payment.id)
 
-    revalidatePath(`/orders/${orderId}`)
-    revalidatePath('/orders')
+      if (refundError) {
+        console.error('Error updating payment with refund:', refundError)
+        return { error: 'Failed to record refund' }
+      }
 
-    return {
-      success: true,
-      message: 'Refund processed successfully',
-      refundAmount: refundCalc.refundAmount,
-      refundId,
+      // Update order status to cancelled
+      const { error: orderUpdateError } = await supabase
+        .from('orders')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId)
+
+      if (orderUpdateError) {
+        console.error('Error updating order status:', orderUpdateError)
+      }
+
+      // If payment was already in freelancer's pending balance, remove it
+      if (payment.transferred_to_freelancer === false) {
+        const amounts = calculateOrderAmounts(order.price)
+        await supabase.rpc('update_freelancer_balance', {
+          p_freelancer_id: order.freelancer_id,
+          p_amount: -amounts.freelancerAmount, // Negative to subtract
+          p_balance_type: 'pending',
+        })
+      }
+
+      revalidatePath(`/orders/${orderId}`)
+      revalidatePath('/earnings')
+
+      return {
+        success: true,
+        message: `Refund of ₹${refundCalc.refundAmount.toFixed(2)} processed successfully`,
+        refundId: refund.id,
+        refundAmount: refundCalc.refundAmount,
+      }
+      
+    } catch (refundError: any) {
+      console.error('Refund error:', refundError)
+      return { 
+        error: `Failed to process refund: ${refundError.error?.description || 'Unknown error'}` 
+      }
     }
   } catch (error) {
     console.error('Error in processRefund:', error)
