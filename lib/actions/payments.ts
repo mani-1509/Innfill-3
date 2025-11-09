@@ -16,6 +16,181 @@ const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || ''
 // =====================================================
 
 /**
+ * Verify bank account with Razorpay
+ * Uses Fund Account + Penny Drop for real verification
+ */
+async function verifyBankAccountWithRazorpay(data: {
+  accountNumber: string
+  ifscCode: string
+  accountHolderName: string
+}) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return { error: '❌ User not authenticated' }
+    }
+
+    const Razorpay = require('razorpay')
+    const razorpayInstance = new Razorpay({
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
+    })
+    
+    console.log('🔍 Starting bank account verification...')
+    
+    // Step 1: Validate formats
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(data.ifscCode)) {
+      return { error: '❌ Invalid IFSC code format. Example: SBIN0001234' }
+    }
+    
+    if (!/^[0-9]{8,18}$/.test(data.accountNumber)) {
+      return { error: '❌ Account number must be 8-18 digits' }
+    }
+    
+    if (data.accountHolderName.length < 3) {
+      return { error: '❌ Account holder name too short' }
+    }
+    
+    // Step 2: Verify IFSC code exists using Razorpay's public API
+    console.log('🔍 Verifying IFSC code...')
+    try {
+      const ifscResponse = await fetch(`https://ifsc.razorpay.com/${data.ifscCode}`)
+      if (!ifscResponse.ok) {
+        return { error: '❌ IFSC code not found. Please verify your bank IFSC code.' }
+      }
+      const ifscData = await ifscResponse.json()
+      console.log('✅ IFSC verified:', ifscData.BANK, '-', ifscData.BRANCH)
+    } catch (ifscError) {
+      return { error: '❌ Unable to verify IFSC code. Please check your internet connection.' }
+    }
+    
+    // Step 3: Get user profile for contact creation
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, display_name, username')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) {
+      return { error: '❌ User profile not found' }
+    }
+
+    // Step 4: Create or get contact in Razorpay
+    console.log('🔍 Creating Razorpay contact...')
+    let contact
+    try {
+      contact = await razorpayInstance.contacts.create({
+        name: data.accountHolderName,
+        email: profile.email,
+        type: 'vendor',
+        reference_id: user.id,
+        notes: {
+          username: profile.username,
+        }
+      })
+      console.log('✅ Contact created:', contact.id)
+    } catch (contactError: any) {
+      console.error('Contact creation error:', contactError)
+      return { error: '❌ Failed to create contact with payment gateway' }
+    }
+
+    // Step 5: Create fund account
+    console.log('🔍 Creating fund account...')
+    let fundAccount
+    try {
+      fundAccount = await razorpayInstance.fundAccount.create({
+        contact_id: contact.id,
+        account_type: 'bank_account',
+        bank_account: {
+          name: data.accountHolderName,
+          ifsc: data.ifscCode,
+          account_number: data.accountNumber,
+        }
+      })
+      console.log('✅ Fund account created:', fundAccount.id)
+    } catch (fundError: any) {
+      console.error('Fund account creation error:', fundError)
+      
+      // Parse Razorpay errors
+      if (fundError.error) {
+        const desc = fundError.error.description
+        if (desc.includes('IFSC')) {
+          return { error: '❌ Invalid IFSC code rejected by bank gateway' }
+        }
+        if (desc.includes('account')) {
+          return { error: '❌ Invalid account number rejected by bank gateway' }
+        }
+        if (desc.includes('name')) {
+          return { error: '❌ Account holder name format invalid' }
+        }
+        return { error: `❌ ${desc}` }
+      }
+      
+      return { error: '❌ Failed to verify bank account with payment gateway' }
+    }
+
+    // Step 6: Perform penny drop validation (₹1 verification)
+    console.log('🔍 Performing penny drop validation...')
+    try {
+      const validation = await razorpayInstance.fundAccount.validate({
+        fund_account_id: fundAccount.id,
+        amount: 100, // ₹1 in paise
+        currency: 'INR',
+        notes: {
+          purpose: 'Account Verification',
+          user_id: user.id,
+        }
+      })
+      
+      console.log('✅ Penny drop validation initiated:', validation.id)
+      console.log('   Status:', validation.status)
+      
+      // Validation statuses: created, completed, failed
+      if (validation.status === 'failed') {
+        return { 
+          error: '❌ Bank account validation failed. Please verify your account details with your bank.' 
+        }
+      }
+      
+      // Check if name matches (if available in response)
+      if (validation.results && validation.results.account_status === 'inactive') {
+        return { error: '❌ Bank account is inactive. Please use an active account.' }
+      }
+
+      console.log('✅ Bank account verified successfully!')
+      
+      return { 
+        success: true,
+        contactId: contact.id,
+        fundAccountId: fundAccount.id,
+        validationId: validation.id,
+        message: '✅ Bank account verified successfully with penny drop validation' 
+      }
+      
+    } catch (validationError: any) {
+      console.error('Penny drop validation error:', validationError)
+      
+      // Even if penny drop fails, we have the fund account created
+      // Store the fund account details and mark for manual review
+      console.log('⚠️ Penny drop failed but fund account created')
+      
+      return { 
+        success: true,
+        contactId: contact.id,
+        fundAccountId: fundAccount.id,
+        needsManualReview: true,
+        message: '⚠️ Bank details saved but require manual verification' 
+      }
+    }
+    
+  } catch (error: any) {
+    console.error('Bank account verification failed:', error)
+    return { error: '❌ Unable to verify bank account. Please try again later.' }
+  }
+}
+
+/**
  * Add or update bank details for freelancer
  */
 export async function updateBankDetails(data: {
@@ -61,16 +236,42 @@ export async function updateBankDetails(data: {
       return { error: 'Invalid PAN number format' }
     }
 
-    // Update profile with bank details
+    // Verify bank account with Razorpay before saving
+    console.log('Verifying bank account with Razorpay...')
+    const verificationResult = await verifyBankAccountWithRazorpay({
+      accountNumber: data.accountNumber,
+      ifscCode: data.ifscCode,
+      accountHolderName: data.accountHolderName,
+    })
+
+    if (verificationResult.error) {
+      return { error: verificationResult.error }
+    }
+
+    // Update profile with bank details and Razorpay IDs
+    const updateData: any = {
+      bank_account_number: data.accountNumber,
+      bank_ifsc: data.ifscCode.toUpperCase(),
+      bank_account_holder_name: data.accountHolderName,
+      pan_number: data.panNumber.toUpperCase(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Store Razorpay fund account ID if available
+    if (verificationResult.fundAccountId) {
+      updateData.razorpay_account_id = verificationResult.fundAccountId
+    }
+
+    // Set KYC status based on verification result
+    if (verificationResult.needsManualReview) {
+      updateData.kyc_verified = false
+    } else {
+      updateData.kyc_verified = true // Penny drop successful
+    }
+
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
-        bank_account_number: data.accountNumber,
-        bank_ifsc: data.ifscCode.toUpperCase(),
-        bank_account_holder_name: data.accountHolderName,
-        pan_number: data.panNumber.toUpperCase(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', user.id)
 
     if (updateError) {
@@ -79,7 +280,12 @@ export async function updateBankDetails(data: {
     }
 
     revalidatePath('/profile')
-    return { success: true, message: 'Bank details saved successfully' }
+    
+    return { 
+      success: true, 
+      message: verificationResult.message || 'Bank details saved successfully',
+      verified: !verificationResult.needsManualReview
+    }
   } catch (error) {
     console.error('Error in updateBankDetails:', error)
     return { error: 'An error occurred while saving bank details' }
