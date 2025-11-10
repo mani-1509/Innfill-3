@@ -50,6 +50,7 @@ export interface Profile {
   total_earnings: number
   total_orders: number
   rating: number
+  rating_count: number
   // Payment fields (Razorpay integration)
   razorpay_account_id: string | null
   bank_account_number: string | null
@@ -199,5 +200,16 @@ export interface Event {
   created_by: string
   created_at: string
   published_at: string
+  updated_at: string
+}
+
+export interface Rating {
+  id: string
+  order_id: string
+  from_user_id: string
+  to_user_id: string
+  rating: number
+  review: string | null
+  created_at: string
   updated_at: string
 }

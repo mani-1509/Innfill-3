@@ -15,6 +15,7 @@ import {
   getSignedDownloadUrl,
 } from '@/lib/actions/orders'
 import { getChatRoomByOrderId } from '@/lib/actions/chat'
+import { getRatingForOrder } from '@/lib/actions/ratings'
 import { uploadOrderFiles } from '@/lib/utils/upload-utils'
 import { createClient } from '@/lib/supabase/client'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -33,9 +34,11 @@ import {
   FiX,
   FiDollarSign,
   FiCreditCard,
+  FiStar,
 } from 'react-icons/fi'
 import { PaymentStatusBanner } from '@/components/payment-status-banner'
 import { PaymentCheckoutModal } from '@/components/modals/payment-checkout-modal'
+import { RatingModal } from '@/components/modals/rating-modal'
 import { calculateOrderAmounts } from '@/lib/utils/payment-calculations'
 
 interface OrderDetailPageProps {
@@ -143,10 +146,25 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
 
+  // Rating modal state
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [hasRated, setHasRated] = useState(false)
+  const [ratingLoading, setRatingLoading] = useState(false)
+
   useEffect(() => {
     fetchOrderDetails()
     fetchChatRoom()
+    checkIfRated()
   }, [id])
+
+  const checkIfRated = async () => {
+    setRatingLoading(true)
+    const result = await getRatingForOrder(id)
+    if (result.success && result.data) {
+      setHasRated(true)
+    }
+    setRatingLoading(false)
+  }
 
   const fetchOrderDetails = async () => {
     setLoading(true)
@@ -927,16 +945,43 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
               {/* Order Completed */}
               {order.status === 'completed' && userRole !== 'admin' && (
-                <div className="text-center py-6">
-                  <div className="mb-3">
-                    <FiCheckCircle className="w-12 h-12 text-green-400 mx-auto" />
+                <div className="space-y-4">
+                  <div className="text-center py-6">
+                    <div className="mb-3">
+                      <FiCheckCircle className="w-12 h-12 text-green-400 mx-auto" />
+                    </div>
+                    <p className="text-lg font-semibold text-green-400 mb-1">Order Completed</p>
+                    <p className="text-sm text-gray-400">
+                      {userRole === 'freelancer' 
+                        ? `Payment of ₹${calculateOrderAmounts(parseFloat(order.price)).freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} released to you`
+                        : 'Thank you for your business!'}
+                    </p>
                   </div>
-                  <p className="text-lg font-semibold text-green-400 mb-1">Order Completed</p>
-                  <p className="text-sm text-gray-400">
-                    {userRole === 'freelancer' 
-                      ? `Payment of ₹${calculateOrderAmounts(parseFloat(order.price)).freelancerAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} released to you`
-                      : 'Thank you for your business!'}
-                  </p>
+
+                  {/* Rating Button */}
+                  {!ratingLoading && (
+                    <div className="pt-2 border-t border-white/10">
+                      {hasRated ? (
+                        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4 text-center">
+                          <div className="flex items-center justify-center gap-2 text-yellow-400 mb-1">
+                            <FiStar className="w-5 h-5 fill-current" />
+                            <p className="font-semibold">You've rated this order</p>
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Thank you for your feedback!
+                          </p>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowRatingModal(true)}
+                          className="w-full py-3 px-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                        >
+                          <FiStar className="w-5 h-5" />
+                          Rate {userRole === 'client' ? 'Freelancer' : 'Client'}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1376,6 +1421,21 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               fetchOrderDetails()
             }
           }}
+        />
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && order && userRole && (userRole === 'client' || userRole === 'freelancer') && (
+        <RatingModal
+          isOpen={showRatingModal}
+          onClose={() => {
+            setShowRatingModal(false)
+            checkIfRated()
+          }}
+          orderId={order.id}
+          toUserId={userRole === 'client' ? order.freelancer.id : order.client.id}
+          toUsername={userRole === 'client' ? order.freelancer.username : order.client.username}
+          userRole={userRole}
         />
       )}
     </div>

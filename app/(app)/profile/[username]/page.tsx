@@ -30,6 +30,7 @@ import {
   deleteService as deleteServiceAction,
   toggleServiceVisibility as toggleServiceVisibilityAction
 } from '@/lib/actions/services'
+import { getUserRatings } from '@/lib/actions/ratings'
 
 type TabType = 'profile' | 'services' | 'finance' | 'application' | 'skills'
 
@@ -70,6 +71,10 @@ export default function ProfilePage() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
+
+  // Ratings/Reviews states
+  const [ratings, setRatings] = useState<any[]>([])
+  const [ratingsLoading, setRatingsLoading] = useState(false)
   
   const supabase = createClient()
 
@@ -81,6 +86,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile?.id) {
       fetchServices(profile.id, 1)
+      fetchRatings(profile.id)
       setIsOwnProfile(currentUser?.id === profile.id)
       // Pre-fill edit form
       setEditFormData({
@@ -152,6 +158,15 @@ export default function ProfilePage() {
     }
 
     setServicesLoading(false)
+  }
+
+  const fetchRatings = async (userId: string) => {
+    setRatingsLoading(true)
+    const result = await getUserRatings(userId)
+    if (result.data) {
+      setRatings(result.data)
+    }
+    setRatingsLoading(false)
   }
 
   const deleteService = async (serviceId: string) => {
@@ -693,7 +708,7 @@ export default function ProfilePage() {
                         <label className="text-gray-400 text-xs uppercase tracking-wider mb-2 block">Client Rating</label>
                         <div className="flex items-center gap-2">
                           <FiStar className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                          <p className="text-white text-lg font-medium">{profile.client_rating?.toFixed(1) || '0.0'}</p>
+                          <p className="text-white text-lg font-medium">{profile.rating?.toFixed(1) || '0.0'}</p>
                         </div>
                       </motion.div>
 
@@ -711,7 +726,127 @@ export default function ProfilePage() {
                     </>
                   )}
                 </div>
-              </div>
+              
+
+              {/* Reviews Section */}
+              {(profile.rating_count > 0 || ratings.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                  className="mt-12"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-white text-2xl font-bold flex items-center gap-3">
+                      <FiStar className="w-6 h-6 text-yellow-400" />
+                      Reviews & Ratings
+                      <span className="text-lg text-gray-400">
+                        ({profile.rating_count || 0})
+                      </span>
+                    </h3>
+                  </div>
+
+                  {ratingsLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="p-6 bg-white/5 rounded-lg border border-white/10 animate-pulse">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-white/10 rounded-full" />
+                            <div className="flex-1 space-y-3">
+                              <div className="h-4 w-32 bg-white/10 rounded" />
+                              <div className="h-3 w-24 bg-white/10 rounded" />
+                              <div className="h-16 w-full bg-white/10 rounded" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : ratings.length === 0 ? (
+                    <div className="text-center py-12 bg-white/5 rounded-lg border border-white/10">
+                      <FiStar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-400 text-lg">No reviews yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {ratings.map((rating: any) => (
+                        <motion.div
+                          key={rating.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-6 bg-white/5 rounded-lg border border-white/10 hover:border-white/20 transition-all"
+                        >
+                          <div className="flex items-start gap-4">
+                            {/* Avatar */}
+                            <div className="flex-shrink-0">
+                              {rating.from_user?.avatar_url ? (
+                                <img
+                                  src={rating.from_user.avatar_url}
+                                  alt={rating.from_user.display_name}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-white/10"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                  <span className="text-white font-semibold text-lg">
+                                    {rating.from_user?.display_name?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-4 mb-2">
+                                <div>
+                                  <h4 className="text-white font-semibold">
+                                    {rating.from_user?.display_name || 'Anonymous'}
+                                  </h4>
+                                  <p className="text-sm text-gray-400">
+                                    {new Date(rating.created_at).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </p>
+                                </div>
+
+                                {/* Star Rating */}
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <FiStar
+                                      key={i}
+                                      className={`w-5 h-5 ${
+                                        i < rating.rating
+                                          ? 'text-yellow-400 fill-yellow-400'
+                                          : 'text-gray-600'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Review Text */}
+                              {rating.review && (
+                                <p className="text-gray-300 leading-relaxed mb-3">
+                                  {rating.review}
+                                </p>
+                              )}
+
+                              {/* Service Name if available */}
+                              {rating.order?.service_plan?.title && (
+                                <div className="text-sm text-gray-400">
+                                  <span className="text-gray-500">For:</span>{' '}
+                                  <span className="text-gray-300">{rating.order.service_plan.title}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
             )}
 
             {/* Services Tab Content */}
