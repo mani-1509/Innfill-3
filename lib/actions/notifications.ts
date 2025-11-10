@@ -261,7 +261,7 @@ export async function sendOrderNotification(
       message: `Order for ${orderDetails.serviceName} has been cancelled`,
     },
     payment_received: {
-      title: '💵 Payment Received!',
+      title: '💵 Payment Will Be Received In 2 Business Days!',
       message: `You'll receive ₹${orderDetails.amount} for ${orderDetails.serviceName} in 2 business days`,
     },
     payment_deadline: {
@@ -277,8 +277,8 @@ export async function sendOrderNotification(
       message: '',
     },
     payout_completed: {
-      title: '',
-      message: '',
+      title: 'Your Payout is Completed!',
+      message: 'Check your linked bank account for the transfer.',
     },
   }
 
