@@ -262,7 +262,7 @@ export async function sendOrderNotification(
     },
     payment_received: {
       title: '💵 Payment Received!',
-      message: `You received ₹${orderDetails.amount} for ${orderDetails.serviceName}`,
+      message: `You'll receive ₹${orderDetails.amount} for ${orderDetails.serviceName} in 2 business days`,
     },
     payment_deadline: {
       title: '⏰ Payment Deadline Approaching!',
