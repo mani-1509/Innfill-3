@@ -769,6 +769,60 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               )}
             </div>
 
+            {/* Revision Requested Alert - Show prominently for freelancer */}
+            {order.status === 'revision_requested' && userRole === 'freelancer' && deliveryHistory.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 rounded-2xl p-6"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-yellow-500/20 rounded-full flex-shrink-0">
+                    <FiAlertCircle className="w-6 h-6 text-yellow-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-yellow-400 mb-2">
+                      ⚠️ Revision Requested
+                    </h3>
+                    <p className="text-sm text-gray-300 mb-4">
+                      The client has requested changes to your delivery. Please review their feedback below:
+                    </p>
+                    
+                    <div className="bg-black/40 border border-yellow-500/30 rounded-lg p-4">
+                      <p className="text-sm font-semibold text-yellow-300 mb-2 flex items-center gap-2">
+                        <FiMessageSquare className="w-4 h-4" />
+                        Client's Feedback:
+                      </p>
+                      <p className="text-white whitespace-pre-wrap">
+                        {(() => {
+                          // Find the latest delivery with revision message
+                          const latestRevision = [...deliveryHistory]
+                            .reverse()
+                            .find(d => d.revision_message && d.status === 'revision_requested')
+                          return latestRevision?.revision_message || 'No revision message provided'
+                        })()}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
+                      <FiClock className="w-4 h-4" />
+                      <span>
+                        Revisions used: {order.revisions_used} / {order.revisions_allowed}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setShowDeliveryModal(true)}
+                      className="mt-4 w-full md:w-auto px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <FiUpload className="w-5 h-5" />
+                      Submit Updated Work
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Delivery (if delivered) */}
             {(order.status === 'delivered' || order.status === 'revision_requested' || order.status === 'completed') && deliveryHistory.length > 0 && (
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
