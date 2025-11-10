@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from './notifications'
 
 interface CreateRatingParams {
   orderId: string
@@ -76,6 +77,22 @@ export async function createRating({
       console.error('Error creating rating:', error)
       return { success: false, error: error.message }
     }
+
+    // Send notification to the rated user
+    const { data: raterProfile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .single()
+
+    const stars = '⭐'.repeat(rating)
+    await createNotification({
+      userId: toUserId,
+      type: 'rating_received',
+      title: `${stars} New Rating Received!`,
+      message: `${raterProfile?.display_name || 'Someone'} rated you ${rating} star${rating > 1 ? 's' : ''}${review ? ' with a review' : ''}`,
+      link: `/profile/${toUserId}`,
+    })
 
     revalidatePath(`/orders/${orderId}`)
     revalidatePath(`/profile/${toUserId}`)

@@ -9,6 +9,7 @@ import { logout } from '@/lib/actions/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FiUser, FiDollarSign, FiTrendingUp, FiSettings, FiLogOut, FiHome, FiUsers, FiMessageSquare, FiBell, FiMenu, FiX } from 'react-icons/fi'
 import logo from '../../public/logo.png'
+import { NotificationBell } from './notification-bell'
 
 export function Navbar() {
   const [user, setUser] = useState<any>(null)
@@ -83,10 +84,7 @@ export function Navbar() {
             {user ? (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="relative flex items-center gap-3">
                 {/* Notification bell */}
-                <button className="relative p-2 text-white hover:bg-white/10 rounded-lg transition-colors" title="Notifications">
-                  <FiBell className="w-5 h-5" />
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
-                  </button>
+                <NotificationBell />
 
                 {/* Profile button */}
                 <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors">

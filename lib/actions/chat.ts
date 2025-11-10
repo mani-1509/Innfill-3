@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "./notifications";
 
 /**
  * Generate signed URLs for chat attachments
@@ -323,6 +324,32 @@ export async function sendMessage(
       .from("chat_rooms")
       .update({ last_message_at: new Date().toISOString() })
       .eq("id", roomId);
+
+    // Send notification to the other participant
+    const recipientId = room.participant_1_id === user.id 
+      ? room.participant_2_id 
+      : room.participant_1_id;
+
+    const { data: senderProfile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .single();
+
+    // Get order info for context
+    const { data: chatRoom } = await supabase
+      .from('chat_rooms')
+      .select('order_id')
+      .eq('id', roomId)
+      .single();
+
+    await createNotification({
+      userId: recipientId,
+      type: 'message_received',
+      title: '💬 New Message',
+      message: `${senderProfile?.display_name || 'Someone'} sent you a message${attachments && attachments.length > 0 ? ' with attachment' : ''}`,
+      link: `/chat/${roomId}`,
+    });
 
     revalidatePath(`/chat/${roomId}`);
 

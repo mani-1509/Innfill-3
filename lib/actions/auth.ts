@@ -149,6 +149,20 @@ export async function resetPassword(password: string) {
   redirect('/login?password_reset=true')
 }
 
+export async function updatePassword(newPassword: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { success: true }
+}
+
 export async function completeOnboarding(
   role: 'freelancer' | 'client',
   username: string

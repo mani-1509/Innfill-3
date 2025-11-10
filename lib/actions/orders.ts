@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { calculateAcceptDeadline } from '@/lib/utils/order-utils'
 import { calculateOrderAmounts, calculateRefundAmount } from '@/lib/utils/payment-calculations'
 import { processRefund, transferToFreelancer } from './payments'
+import { sendOrderNotification } from './notifications'
 
 /**
  * Generate a signed URL for downloading a file from Supabase Storage
@@ -126,6 +127,18 @@ export async function createOrder(data: {
     return { error: orderError.message }
   }
 
+  // Send notification to freelancer
+  const { data: clientProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  await sendOrderNotification(order.id, service.freelancer_id, 'order_created', {
+    serviceName: service.title,
+    clientName: clientProfile?.display_name || 'A client',
+  })
+
   revalidatePath('/orders')
   return { success: true, orderId: order.id }
 }
@@ -190,7 +203,28 @@ export async function acceptOrder(orderId: string) {
     // Don't fail the order acceptance if chat creation fails
   }
 
-  // TODO: Send notification to client
+  // Send notification to client
+  const { data: freelancerProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  await sendOrderNotification(orderId, order.client_id, 'order_accepted', {
+    serviceName: service?.title || 'Service',
+    freelancerName: freelancerProfile?.display_name || 'Freelancer',
+  })
+
+  // Send payment deadline reminder
+  await sendOrderNotification(orderId, order.client_id, 'payment_deadline', {
+    serviceName: service?.title || 'Service',
+  })
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -244,8 +278,25 @@ export async function declineOrder(orderId: string, reason?: string) {
     return { error: updateError.message }
   }
 
+  // Send notification to client
+  const { data: freelancerProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  await sendOrderNotification(orderId, order.client_id, 'order_declined', {
+    serviceName: service?.title || 'Service',
+    freelancerName: freelancerProfile?.display_name || 'Freelancer',
+  })
+
   // TODO: Process refund (100% to client)
-  // TODO: Send notification to client
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -297,6 +348,24 @@ export async function markOrderInProgress(orderId: string) {
   if (updateError) {
     return { error: updateError.message }
   }
+
+  // Send notification to client
+  const { data: freelancerProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  await sendOrderNotification(orderId, order.client_id, 'order_in_progress', {
+    serviceName: service?.title || 'Service',
+    freelancerName: freelancerProfile?.display_name || 'Freelancer',
+  })
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -358,7 +427,23 @@ export async function submitDelivery(data: {
     return { error: updateError.message }
   }
 
-  // TODO: Send notification to client
+  // Send notification to client
+  const { data: freelancerProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  await sendOrderNotification(data.orderId, order.client_id, 'order_delivered', {
+    serviceName: service?.title || 'Service',
+    freelancerName: freelancerProfile?.display_name || 'Freelancer',
+  })
 
   revalidatePath(`/orders/${data.orderId}`)
   revalidatePath('/orders')
@@ -418,7 +503,23 @@ export async function requestRevision(orderId: string, revisionMessage: string) 
     return { error: updateError.message }
   }
 
-  // TODO: Send notification to freelancer
+  // Send notification to freelancer
+  const { data: clientProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  await sendOrderNotification(orderId, order.freelancer_id, 'order_revision_requested', {
+    serviceName: service?.title || 'Service',
+    clientName: clientProfile?.display_name || 'Client',
+  })
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -496,7 +597,22 @@ export async function completeOrder(orderId: string) {
     // Don't fail order completion if transfer fails - it will be retried later
   }
 
-  // TODO: Send notification to freelancer
+  // Send notification to freelancer
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  await sendOrderNotification(orderId, order.freelancer_id, 'order_completed', {
+    serviceName: service?.title || 'Service',
+  })
+
+  // Send payment notification
+  await sendOrderNotification(orderId, order.freelancer_id, 'payment_received', {
+    serviceName: service?.title || 'Service',
+    amount: freelancerEarnings,
+  })
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -562,7 +678,23 @@ export async function cancelOrder(orderId: string, reason?: string) {
     }
   }
 
-  // TODO: Send notification to freelancer
+  // Send notification to freelancer
+  const { data: service } = await supabase
+    .from('service_plans')
+    .select('title')
+    .eq('id', order.service_plan_id)
+    .single()
+
+  const { data: clientProfile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .single()
+
+  await sendOrderNotification(orderId, order.freelancer_id, 'order_cancelled', {
+    serviceName: service?.title || 'Service',
+    clientName: clientProfile?.display_name || 'Client',
+  })
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')

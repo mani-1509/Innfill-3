@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { calculateOrderAmounts, calculateRefundAmount } from '@/lib/utils/payment-calculations'
+import { sendOrderNotification } from './notifications'
 
 // =====================================================
 // CONSTANTS & CONFIGURATION
@@ -550,6 +551,19 @@ export async function verifyPayment(data: {
     if (balanceError) {
       console.error('Error updating freelancer balance:', balanceError)
     }
+
+    // Send payment notifications
+    const { data: service } = await supabase
+      .from('service_plans')
+      .select('title')
+      .eq('id', order.service_plan_id)
+      .single()
+
+    // Notify freelancer about payment received
+    await sendOrderNotification(data.orderId, order.freelancer_id, 'order_payment_completed', {
+      serviceName: service?.title || 'Service',
+      amount: order.total_amount,
+    })
 
     revalidatePath(`/orders/${data.orderId}`)
     revalidatePath('/orders')
