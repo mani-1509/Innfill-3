@@ -170,7 +170,7 @@ export default function AdminEventsPage() {
           playsInline
           className="absolute inset-0 w-full h-full object-cover opacity-30"
         >
-          <source src="/videos/background.mp4" type="video/mp4" />
+          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
         </video>
       </div>
 

@@ -55,6 +55,7 @@ export interface Profile {
   bank_account_number: string | null
   bank_ifsc: string | null
   bank_account_holder_name: string | null
+  upi_id: string | null
   pan_number: string | null
   kyc_verified: boolean
   available_balance: number
@@ -169,6 +170,12 @@ export interface Payment {
   refund_id: string | null
   refund_amount: number | null
   refunded_at: string | null
+  // Manual payout fields
+  transferred_to_freelancer: boolean
+  transfer_pending_manual: boolean
+  manual_transfer_confirmed: boolean
+  manual_transfer_id: string | null
+  manual_transfer_date: string | null
   created_at: string
 }
 

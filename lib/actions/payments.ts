@@ -187,6 +187,7 @@ export async function updateBankDetails(data: {
   accountNumber: string
   ifscCode: string
   accountHolderName: string
+  upiId?: string
   panNumber: string
 }) {
   try {
@@ -243,6 +244,7 @@ export async function updateBankDetails(data: {
       bank_account_number: data.accountNumber,
       bank_ifsc: data.ifscCode.toUpperCase(),
       bank_account_holder_name: data.accountHolderName,
+      upi_id: data.upiId || null,
       pan_number: data.panNumber.toUpperCase(),
       updated_at: new Date().toISOString(),
     }
@@ -601,20 +603,65 @@ export async function transferToFreelancer(orderId: string) {
       return { error: 'Payment already transferred to freelancer' }
     }
 
-    // Check if freelancer has bank details
-    if (!order.freelancer.razorpay_account_id) {
-      return { error: 'Freelancer has not linked bank account' }
-    }
-
     // Calculate transfer amount
     const amounts = calculateOrderAmounts(order.price)
 
-    // Create Razorpay transfer (payout to freelancer)
-    console.log('🔄 Initiating transfer to freelancer...')
+    // Check if manual payout mode (no Razorpay Payouts for non-business accounts)
+    const MANUAL_PAYOUT_MODE = process.env.RAZORPAY_MANUAL_PAYOUT === 'true'
+    
+    if (MANUAL_PAYOUT_MODE) {
+      console.log('💰 Manual payout mode - Recording transfer for manual processing...')
+      
+      // Check if freelancer has bank details
+      if (!order.freelancer.bank_account_number || !order.freelancer.bank_ifsc) {
+        // Still mark as pending, but admin will see missing details
+        console.log('⚠️ Warning: Freelancer missing bank details')
+      }
+      
+      // Record as pending manual transfer
+      const transferId = `manual_${Date.now()}_${orderId.substring(0, 8)}`
+      
+      const { error: paymentUpdateError } = await supabase
+        .from('payments')
+        .update({
+          transferred_to_freelancer: false, // Keep false until manually confirmed
+          razorpay_transfer_id: transferId,
+          transfer_pending_manual: true, // New field to track manual transfers
+        })
+        .eq('id', payment.id)
+
+      if (paymentUpdateError) {
+        console.error('Error updating payment record:', paymentUpdateError)
+        return { error: 'Failed to record transfer' }
+      }
+
+      revalidatePath(`/orders/${orderId}`)
+      revalidatePath('/admin/payouts')
+
+      return {
+        success: true,
+        manual: true,
+        message: 'Transfer marked for manual payout. Please transfer money manually.',
+        transferId,
+        freelancerDetails: {
+          name: order.freelancer.bank_account_holder_name,
+          accountNumber: order.freelancer.bank_account_number,
+          ifsc: order.freelancer.bank_ifsc,
+          amount: amounts.freelancerAmount,
+        }
+      }
+    }
+
+    // Automatic Razorpay Payout (requires business account)
+    console.log('🔄 Initiating automatic Razorpay transfer...')
+    
+    // Check if freelancer has Razorpay account linked
+    if (!order.freelancer.razorpay_account_id) {
+      return { error: 'Freelancer has not linked bank account with Razorpay' }
+    }
     
     try {
-      // In production, use Razorpay Payouts API
-      // For now, validate account before marking as transferred
+      // Use Razorpay Payouts API (requires business KYC)
       const transferResponse = await fetch('https://api.razorpay.com/v1/payouts', {
         method: 'POST',
         headers: {
@@ -662,7 +709,6 @@ export async function transferToFreelancer(orderId: string) {
           .from('profiles')
           .update({ 
             kyc_verified: true,
-            updated_at: new Date().toISOString() 
           })
           .eq('id', order.freelancer_id)
       }
@@ -673,7 +719,6 @@ export async function transferToFreelancer(orderId: string) {
         .update({
           transferred_to_freelancer: true,
           razorpay_transfer_id: transferData.id,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', payment.id)
 
@@ -713,6 +758,86 @@ export async function transferToFreelancer(orderId: string) {
   } catch (error) {
     console.error('Error in transferToFreelancer:', error)
     return { error: 'Failed to transfer payment' }
+  }
+}
+
+/**
+ * Mark manual transfer as completed (for admin use)
+ */
+export async function confirmManualTransfer(orderId: string, transactionId?: string) {
+  try {
+    const supabase = await createClient()
+
+    // Get order with payment
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('*, payment:payments(*)')
+      .eq('id', orderId)
+      .single()
+
+    if (orderError || !order) {
+      return { error: 'Order not found' }
+    }
+
+    const payment = order.payment?.[0]
+    if (!payment) {
+      return { error: 'Payment not found' }
+    }
+
+    if (payment.transferred_to_freelancer) {
+      return { error: 'Already marked as transferred' }
+    }
+
+    // Calculate amounts
+    const amounts = calculateOrderAmounts(order.price)
+
+    // Update payment record
+    const { error: updateError } = await supabase
+      .from('payments')
+      .update({
+        transferred_to_freelancer: true,
+        manual_transfer_confirmed: true,
+        manual_transfer_id: transactionId || `manual_${Date.now()}`,
+        manual_transfer_date: new Date().toISOString(),
+        transfer_pending_manual: false,
+      })
+      .eq('id', payment.id)
+
+    if (updateError) {
+      console.error('Error confirming manual transfer:', updateError)
+      return { error: 'Failed to confirm transfer' }
+    }
+
+    // Move from pending to available balance
+    const { error: releaseError } = await supabase.rpc('release_pending_balance', {
+      p_freelancer_id: order.freelancer_id,
+      p_amount: amounts.freelancerAmount,
+    })
+
+    if (releaseError) {
+      console.error('Error releasing balance:', releaseError)
+      return { error: 'Failed to update balance' }
+    }
+
+    // Mark account as verified (since manual transfer succeeded)
+    await supabase
+      .from('profiles')
+      .update({ 
+        kyc_verified: true,
+      })
+      .eq('id', order.freelancer_id)
+
+    revalidatePath(`/orders/${orderId}`)
+    revalidatePath('/admin/payouts')
+    revalidatePath('/earnings')
+
+    return {
+      success: true,
+      message: 'Manual transfer confirmed successfully'
+    }
+  } catch (error) {
+    console.error('Error in confirmManualTransfer:', error)
+    return { error: 'Failed to confirm manual transfer' }
   }
 }
 

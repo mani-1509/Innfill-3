@@ -43,6 +43,13 @@ const bankDetailsSchema = z.object({
     .min(3, 'Account holder name must be at least 3 characters')
     .max(100, 'Account holder name must be at most 100 characters')
     .regex(/^[a-zA-Z\s]+$/, 'Account holder name must contain only letters and spaces'),
+  upiId: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(val),
+      'Invalid UPI ID format (e.g., name@paytm, 9876543210@ybl)'
+    ),
   panNumber: z
     .string()
     .length(10, 'PAN must be exactly 10 characters')
@@ -60,6 +67,7 @@ interface BankDetailsFormProps {
     accountNumber?: string
     ifscCode?: string
     accountHolderName?: string
+    upiId?: string
     panNumber?: string
   }
   onSuccess?: () => void
@@ -76,6 +84,7 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
       confirmAccountNumber: initialData?.accountNumber || '',
       ifscCode: initialData?.ifscCode || '',
       accountHolderName: initialData?.accountHolderName || '',
+      upiId: initialData?.upiId || '',
       panNumber: initialData?.panNumber || '',
     },
   })
@@ -97,6 +106,7 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
         accountNumber: data.accountNumber,
         ifscCode: data.ifscCode,
         accountHolderName: data.accountHolderName,
+        upiId: data.upiId || undefined,
         panNumber: data.panNumber,
       })
 
@@ -255,6 +265,28 @@ export function BankDetailsForm({ initialData, onSuccess }: BankDetailsFormProps
                 </FormControl>
                 <FormDescription>
                   11-character bank branch code (check your passbook or cheque)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* UPI ID */}
+          <FormField
+            control={form.control}
+            name="upiId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>UPI ID (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g., yourname@paytm or 9876543210@ybl"
+                    {...field}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormDescription>
+                  📱 For faster payments - Your PhonePe, Paytm, Google Pay, or other UPI ID
                 </FormDescription>
                 <FormMessage />
               </FormItem>

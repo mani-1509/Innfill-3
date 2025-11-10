@@ -138,6 +138,15 @@ export function Navbar() {
                           </motion.button>
                         </Link>
 
+                        {user?.profile?.role === 'admin' && (
+                          <Link href="/admin/dashboard" onClick={() => setIsDropdownOpen(false)}>
+                            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-white hover:bg-white/5 rounded-lg transition-all duration-300">
+                              <FiUser className="w-4 h-4" />
+                              <span>Admin Dashboard</span>
+                            </motion.button>
+                          </Link>
+                        )}
+
                         <div className="border-t border-white/10 my-2" />
 
                         <Link href="/orders" onClick={() => setIsDropdownOpen(false)}>
@@ -219,6 +228,14 @@ export function Navbar() {
                       <span>Profile</span>
                     </div>
                   </Link>
+                  {user?.profile?.role === 'admin' && (
+                    <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                      <div className="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 rounded-lg transition-colors">
+                        <FiUser className="w-4 h-4" />
+                        <span>Admin Dashboard</span>
+                      </div>
+                    </Link>
+                  )}
                   <Link href="/orders" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 rounded-lg transition-colors">
                       <FiDollarSign className="w-4 h-4" />

@@ -148,7 +148,13 @@ export function PaymentCheckoutModal({
         setIsProcessing(false)
       })
 
-      razorpay.open()
+      // Close the dialog before opening Razorpay to avoid z-index conflicts
+      onOpenChange(false)
+      
+      // Small delay to ensure dialog closes smoothly
+      setTimeout(() => {
+        razorpay.open()
+      }, 100)
     } catch (error) {
       console.error('Payment error:', error)
       alert('An error occurred while processing payment')
