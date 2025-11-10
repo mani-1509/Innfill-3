@@ -457,7 +457,7 @@ export default function ProfilePage() {
             </h1>
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
               <p className="text-gray-400 text-sm md:text-lg">
-                {profile.role === "client" ? "Client" : "Freelancer"}
+                {profile.role}
               </p>
             </div>
           </div>
