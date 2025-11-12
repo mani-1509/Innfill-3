@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Point crawlers to the sitemap
+Sitemap: https://innfill.in/sitemap.xml
+
+# If you have admin or internal routes you don't want indexed, add them here, for example:
+# Disallow: /admin
+# Disallow: /api
