@@ -2,9 +2,113 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 
 export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "UI/UX Designer",
+      content: "Innfill helped me land 3 projects in my first month. The matching algorithm is spot-on!",
+      avatar: "SC"
+    },
+    {
+      name: "Marcus Rodriguez",
+      role: "Full-Stack Developer",
+      content: "Finally, a platform that understands freelancers. No more endless bidding wars.",
+      avatar: "MR"
+    },
+    {
+      name: "Priya Patel",
+      role: "Content Writer",
+      content: "The escrow system gives me peace of mind. I get paid on time, every time.",
+      avatar: "PP"
+    },
+    {
+      name: "David Kim",
+      role: "Marketing Consultant",
+      content: "Best freelancing experience I've had. Clean interface, great clients, fair rates.",
+      avatar: "DK"
+    },
+    {
+      name: "Alex Thompson",
+      role: "Graphic Designer",
+      content: "The client matching is incredible. I only work with serious clients now.",
+      avatar: "AT"
+    },
+    {
+      name: "Lisa Wang",
+      role: "Video Editor",
+      content: "Payment protection and fast payouts make this platform trustworthy.",
+      avatar: "LW"
+    },
+    {
+      name: "James Mitchell",
+      role: "Web Developer",
+      content: "Finally found a platform that values quality over quantity. Great clients!",
+      avatar: "JM"
+    },
+    {
+      name: "Maria Garcia",
+      role: "Social Media Manager",
+      content: "The dashboard is intuitive and the project flow is seamless.",
+      avatar: "MG"
+    },
+    {
+      name: "Robert Lee",
+      role: "SEO Specialist",
+      content: "Consistent work and fair rates. This is how freelancing should be.",
+      avatar: "RL"
+    },
+    {
+      name: "Emma Johnson",
+      role: "Copywriter",
+      content: "The proposal templates save me hours. Highly recommend!",
+      avatar: "EJ"
+    }
+  ]
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.1
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6
+      }
+    }
+  }
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6
+      }
+    },
+    hover: {
+      y: -8,
+      transition: {
+        duration: 0.3
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white relative">
@@ -48,10 +152,7 @@ export default function Home() {
                 <Link href="/how-it-works" className="text-gray-300 hover:text-white transition font-medium">
                   How It Works
                 </Link>
-                <Link href="#capabilities" className="text-gray-300 hover:text-white transition font-medium">
-                  Features
-                </Link>
-                <Link href="#cta" className="text-gray-300 hover:text-white transition font-medium">
+                <Link href="mailto:support@innfill.in" className="text-gray-300 hover:text-white transition font-medium">
                   Contact
                 </Link>
               </div>
@@ -150,22 +251,39 @@ export default function Home() {
 
         {/* Hero Section */}
         <section className="container mx-auto px-4 py-20 md:py-32">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-block mb-6 px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-sm font-semibold">
-              ⭐ NEW GEN AI FREELANCING PLATFORM
-            </div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              Freelancing<br />Automated
-            </h1>
-            <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-              Fast, reliable freelancing that finds opportunities and connects you at scale.
-            </p>
+          <motion.div 
+            className="max-w-4xl mx-auto text-center"
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <motion.div 
+              className="inline-block mb-6 px-4 py-2 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full text-sm font-semibold"
+              variants={itemVariants}
+            >
+              ⭐ NEW GEN FREELANCING PLATFORM
+            </motion.div>
+            <motion.h1 
+              className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
+              variants={itemVariants}
+            >
+              How Freelancers grow faster with Innfill
+            </motion.h1>
+            <motion.p 
+              className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto"
+              variants={itemVariants}
+            >
+              The platform that connects you with the right clients, simplifies work, and helps you get paid on time.
+            </motion.p>
 
             {/* Waitlist Card */}
-            <div className="max-w-xl mx-auto">
+            <motion.div 
+              className="max-w-xl mx-auto"
+              variants={itemVariants}
+            >
               <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:border-blue-500/30 transition-all">
                 <Link href="/register">
-                  <button className="w-full mb-6 bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-lg text-base font-semibold transition-all flex items-center justify-center gap-2">
+                  <button className="w-full mb-6 bg-white hover:bg-black hover:text-white text-black py-4 px-6 rounded-lg text-base font-semibold transition-all flex items-center justify-center gap-2 border border-transparent hover:border-white/20">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -179,31 +297,125 @@ export default function Home() {
                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                       />
                     </svg>
-                    JOIN THE WAITING LIST
+                    START NOW — NO CARD NEEDED
                   </button>
                 </Link>
+
                 <div className="text-center">
                   <div className="text-5xl font-bold text-blue-400 mb-2">112</div>
-                  <div className="text-sm text-gray-400 uppercase tracking-wider">USERS SIGNED UP</div>
+                  <div className="text-sm text-gray-400 uppercase tracking-wider">
+                    FREELANCERS ALREADY SIGNED UP
+                  </div>
                 </div>
+
                 <p className="text-gray-400 text-sm mt-6 text-center">
-                  Be part of the growing community of freelancers and clients
+                  Get matched with real projects and clients.
                 </p>
+              </div>
+            </motion.div>
+
+          </motion.div>
+        </section>
+
+        <section id="how-it-works" className="container mx-auto px-6 md:px-12 py-20">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              We made freelancing simple. Just follow these 4 steps and start earning.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left — Illustration / Image */}
+            <div className="flex justify-center">
+              <img
+                src="https://res.cloudinary.com/dg0u5ptwr/image/upload/v1762971933/screencapture-innfill-in-profile-user1-2025-11-12-23_38_21_z3texh.png"
+                alt="How Innfill works illustration"
+                className="rounded-2xl border border-white/10 shadow-lg max-w-full md:max-w-md"
+              />
+            </div>
+
+            {/* Right — Steps */}
+            <div className="space-y-8">
+              <div className="flex items-start gap-4">
+                <div className="bg-blue-500/20 text-blue-400 font-bold w-10 h-10 rounded-full flex items-center justify-center">
+                  1
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Create Your Profile</h3>
+                  <p className="text-gray-400 text-sm">
+                    Sign up, showcase your skills, and set up your portfolio. It takes less than 5 minutes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="bg-blue-500/20 text-blue-400 font-bold w-10 h-10 rounded-full flex items-center justify-center">
+                  2
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Get Matched with Projects</h3>
+                  <p className="text-gray-400 text-sm">
+                    We instantly connect you with clients looking for your exact skills.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="bg-blue-500/20 text-blue-400 font-bold w-10 h-10 rounded-full flex items-center justify-center">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Deliver & Collaborate</h3>
+                  <p className="text-gray-400 text-sm">
+                    Use built-in tools to chat, share files, and manage timelines easily.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="bg-blue-500/20 text-blue-400 font-bold w-10 h-10 rounded-full flex items-center justify-center">
+                  4
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Get Paid Securely</h3>
+                  <p className="text-gray-400 text-sm">
+                    Once your client approves the project, funds are released instantly to your account.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Capabilities Section */}
-        <section id="capabilities" className="container mx-auto px-4 py-20">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Capabilities</h2>
-            <p className="text-gray-400">Powered by advanced AI</p>
-          </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {/* Smart Opportunity Discovery */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+        {/* Capabilities Section */}
+        <section id="capabilities" className="container mx-auto px-4 py-5">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-4xl font-bold mb-4">What Makes Innfill Different</h2>
+            <p className="text-gray-400">Built to simplify freelancing — not overcomplicate it.</p>
+          </motion.div>
+
+          <motion.div 
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={containerVariants}
+          >
+
+            {/* Smart Project Discovery */}
+            <motion.div 
+              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all"
+              variants={cardVariants}
+              whileHover="hover"
+            >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
@@ -220,15 +432,19 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-white font-semibold text-lg mb-3">Smart Opportunity Discovery</h3>
+                <h3 className="text-white font-semibold text-lg mb-3">Smart Project Discovery</h3>
                 <p className="text-gray-400 text-sm">
-                  AI finds perfect projects based on your skills and goals
+                  Find freelance gigs that match your skills and goals — no endless scrolling.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Personalized Matching */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+            {/* Effortless Matching */}
+            <motion.div 
+              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all"
+              variants={cardVariants}
+              whileHover="hover"
+            >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
@@ -245,15 +461,19 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-white font-semibold text-lg mb-3">Personalized Matching</h3>
+                <h3 className="text-white font-semibold text-lg mb-3">Effortless Matching</h3>
                 <p className="text-gray-400 text-sm">
-                  Craft compelling proposals that convert using AI insights
+                  Get paired with the right clients and services that fit your vibe perfectly.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Auto-Negotiation */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+            {/* Seamless Collaboration */}
+            <motion.div 
+              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all"
+              variants={cardVariants}
+              whileHover="hover"
+            >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
@@ -270,15 +490,19 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-white font-semibold text-lg mb-3">Auto-Negotiation</h3>
+                <h3 className="text-white font-semibold text-lg mb-3">Seamless Collaboration</h3>
                 <p className="text-gray-400 text-sm">
-                  Handle responses and negotiate deals automatically
+                  Chat, share files, and manage work smoothly — all in one place.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Performance Analytics */}
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all">
+            {/* Performance Insights */}
+            <motion.div 
+              className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all"
+              variants={cardVariants}
+              whileHover="hover"
+            >
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 bg-white/10 rounded-full flex items-center justify-center">
                   <svg
@@ -295,28 +519,215 @@ export default function Home() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-white font-semibold text-lg mb-3">Performance Analytics</h3>
+                <h3 className="text-white font-semibold text-lg mb-3">Performance Insights</h3>
                 <p className="text-gray-400 text-sm">
-                  Track success rates and optimize your freelancing
+                  Track orders, earnings, and client feedback to grow smarter.
                 </p>
               </div>
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* Testimonials Section */}
+        {/* <section className="py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">What Our Freelancers Say</h2>
+            <p className="text-gray-400">Real experiences from real professionals</p>
+          </div>
+
+          <div className="relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none"></div>
+            
+            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none"></div>
+            
+            <div className="flex animate-scroll">
+              {testimonials.map((testimonial, index) => (
+                <div key={`first-${index}`} className="flex-shrink-0 w-80 mx-4 p-4">
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-full">
+                    <blockquote className="text-white font-medium mb-4 leading-relaxed">
+                      "{testimonial.content}"
+                    </blockquote>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {testimonial.avatar}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white text-sm">{testimonial.name}</div>
+                        <div className="text-gray-400 text-xs">{testimonial.role}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {testimonials.map((testimonial, index) => (
+                <div key={`second-${index}`} className="flex-shrink-0 w-80 mx-4 p-4">
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-full">
+                    <blockquote className="text-white font-medium mb-4 leading-relaxed">
+                      "{testimonial.content}"
+                    </blockquote>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                        {testimonial.avatar}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white text-sm">{testimonial.name}</div>
+                        <div className="text-gray-400 text-xs">{testimonial.role}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+        </section> */}
+
+        {/* FAQ Section */}
+        <section className="mb-20 container mx-auto px-20 py-10">
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold mb-4 text-white">Frequently Asked Questions</h2>
+            <p className="text-gray-200">Quick answers to common questions</p>
+          </motion.div>
+
+          <motion.div 
+            className="space-y-4 text-center max-w-4xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={containerVariants}
+          >
+            <motion.details 
+              className="bg-white/5 backdrop-blur-sm rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-white/10"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <summary className="font-semibold text-white cursor-pointer text-lg">
+                How long does it take to get paid?
+              </summary>
+              <motion.div 
+                className="text-gray-200 mt-4"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                Freelancers receive payment 1-3 business days after order completion. Once the client approves your delivery, funds are automatically transferred to your registered bank account.
+              </motion.div>
+            </motion.details>
+
+            <motion.details 
+              className="bg-white/5 backdrop-blur-sm rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-white/10"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <summary className="font-semibold text-white cursor-pointer text-lg">
+                What if I&apos;m not satisfied with the delivery?
+              </summary>
+              <motion.div 
+                className="text-gray-200 mt-4"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                You can request revisions if included in the service. If the work doesn&apos;t meet requirements, you can raise a dispute. Our support team will review and mediate fairly.
+              </motion.div>
+            </motion.details>
+
+            <motion.details 
+              className="bg-white/5 backdrop-blur-sm rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-white/10"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <summary className="font-semibold text-white cursor-pointer text-lg">
+                How does the escrow system work?
+              </summary>
+              <motion.div 
+                className="text-gray-200 mt-4"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                When you pay, funds are held securely (not released to freelancer). Money is only released after you approve the delivery. This protects both parties.
+              </motion.div>
+            </motion.details>
+
+            <motion.details 
+              className="bg-white/5 backdrop-blur-sm rounded-xl shadow-lg p-6 hover:shadow-xl transition-all border border-white/10"
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <summary className="font-semibold text-white cursor-pointer text-lg">
+                What happens if a freelancer doesn&apos;t deliver?
+              </summary>
+              <motion.div 
+                className="text-gray-200 mt-4"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                If a freelancer fails to deliver within the agreed timeline, you can raise a dispute. Our team will investigate and issue a full refund if appropriate.
+              </motion.div>
+            </motion.details>
+          </motion.div>
         </section>
 
         {/* CTA Section */}
         <section id="cta" className="container mx-auto px-4 py-20">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-4">Ready to Automate?</h2>
-            <p className="text-gray-400 mb-8">
-              Join thousands of freelancers already waiting for early access
-            </p>
-            <Link href="/register">
-              <button className="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-lg text-lg font-semibold transition-all hover:shadow-lg hover:shadow-white/20">
-                Start Now
-              </button>
-            </Link>
-          </div>
+          <motion.div 
+            className="max-w-2xl mx-auto text-center"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.h2 
+              className="text-4xl font-bold mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              Ready to Join?
+            </motion.h2>
+            <motion.p 
+              className="text-gray-400 mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              Set up a service and get discovered by clients today
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+            >
+              <Link href="/register">
+                <motion.button 
+                  className="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-lg text-lg font-semibold transition-all hover:shadow-lg hover:shadow-white/20"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  Start Now
+                </motion.button>
+              </Link>
+            </motion.div>
+          </motion.div>
         </section>
 
         {/* Footer */}

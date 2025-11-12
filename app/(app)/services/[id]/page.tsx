@@ -442,7 +442,7 @@ export default function ServiceDetailPage({ params }: ServiceDetailPageProps) {
 
           {/* Right Column - Pricing Plans */}
           <div className="lg:col-span-1">
-            <div className="sticky top-8 modern-card p-6 space-y-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
+            <div className="sticky top-30 modern-card p-6 space-y-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
               {/* Plan Selector */}
               <div className="grid grid-cols-3 gap-2">
                 {["Basic", "Standard", "Premium"].map((tier) => (
