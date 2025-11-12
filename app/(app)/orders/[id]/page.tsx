@@ -647,7 +647,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
               <div className="flex gap-4">
                 <img
-                  src={order.service.images?.[0] || '/placeholder.jpg'}
+                  src={order.service.images?.[0]}
                   alt={order.service.title}
                   className="w-24 h-24 rounded-lg object-cover"
                 />
@@ -1048,7 +1048,13 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                   <p className="text-lg font-semibold text-red-400 mb-1">Order Cancelled</p>
                   <p className="text-sm text-gray-400">
                     {userRole === 'client' 
-                      ? `Refund of ₹${parseFloat(order.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })} processed (GST non-refundable)`
+                      ? (() => {
+                          const servicePrice = parseFloat(order.price)
+                          const processingFee = servicePrice * 0.04
+                          const refundAmount = servicePrice - processingFee
+                          const gst = calculateOrderAmounts(servicePrice).gstAmount
+                          return `Refund: ₹${refundAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} (4% processing fee + GST non-refundable)`
+                        })()
                       : 'This order has been cancelled'}
                   </p>
                 </div>
@@ -1409,12 +1415,30 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 {order.status === 'accepted' || order.status === 'in_progress' ? (
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                     <p className="text-sm text-blue-400 font-semibold mb-1">Refund Information:</p>
-                    <p className="text-xs text-gray-400">
-                      You'll receive ₹{parseFloat(order.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })} back (service price only)
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      GST amount (₹{calculateOrderAmounts(parseFloat(order.price)).gstAmount.toFixed(2)}) is non-refundable
-                    </p>
+                    {(() => {
+                      const servicePrice = parseFloat(order.price)
+                      const amounts = calculateOrderAmounts(servicePrice)
+                      const processingFee = servicePrice * 0.04
+                      const refundAmount = servicePrice - processingFee
+                      return (
+                        <>
+                          <p className="text-xs text-gray-400 mb-1">
+                            Service Price: ₹{servicePrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-gray-400 mb-1">
+                            Less: Processing Fee (4%): -₹{processingFee.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-gray-400 mb-1">
+                            Less: GST (non-refundable): -₹{amounts.gstAmount.toFixed(2)}
+                          </p>
+                          <div className="border-t border-blue-500/20 mt-2 pt-2">
+                            <p className="text-sm text-blue-300 font-semibold">
+                              Refund Amount: ₹{refundAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 ) : (
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">

@@ -296,7 +296,28 @@ export async function declineOrder(orderId: string, reason?: string) {
     freelancerName: freelancerProfile?.display_name || 'Freelancer',
   })
 
-  // TODO: Process refund (100% to client)
+  // Check if payment was made (status would be pending_payment if client paid)
+  // If payment exists, process full refund (100% to client since order declined before acceptance)
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('order_id', orderId)
+    .eq('status', 'completed')
+    .single()
+
+  if (payment) {
+    // Process full refund using processRefund function
+    const { processRefund } = await import('./payments')
+    const refundResult = await processRefund(orderId, `Order declined by freelancer: ${reason || 'No reason provided'}`)
+    
+    if (!refundResult.success) {
+      console.error('⚠️ Failed to process refund after decline:', refundResult.error)
+      // Don't fail the decline - refund can be processed manually by admin
+      // But log it for tracking
+    } else {
+      console.log('✅ Full refund processed for declined order:', refundResult.refundAmount)
+    }
+  }
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -670,11 +691,14 @@ export async function cancelOrder(orderId: string, reason?: string) {
   }
 
   // Process refund if payment was made
+  let refundAmount: number | undefined
   if (paymentMade) {
     const refundResult = await processRefund(orderId, reason || 'Order cancelled by client')
     if (!refundResult.success) {
       console.error('Failed to process refund:', refundResult.error)
       // Don't fail cancellation if refund fails - it can be processed manually
+    } else {
+      refundAmount = refundResult.refundAmount
     }
   }
 
@@ -701,7 +725,7 @@ export async function cancelOrder(orderId: string, reason?: string) {
   return { 
     success: true,
     refundProcessed: paymentMade,
-    refundAmount: paymentMade ? (await processRefund(orderId, reason || 'Order cancelled by client')).refundAmount : undefined
+    refundAmount: refundAmount
   }
 }
 

@@ -36,15 +36,20 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
+              <Link href="/">
               <div className="text-xl sm:text-2xl font-bold">
                 <span className="text-white">INN</span>
                 <span className="text-blue-500">FILL</span>
               </div>
+              </Link>
 
               {/* Desktop Menu */}
               <div className="hidden md:flex items-center gap-8">
-                <Link href="#capabilities" className="text-gray-300 hover:text-white transition font-medium">
+                <Link href="/how-it-works" className="text-gray-300 hover:text-white transition font-medium">
                   How It Works
+                </Link>
+                <Link href="#capabilities" className="text-gray-300 hover:text-white transition font-medium">
+                  Features
                 </Link>
                 <Link href="#cta" className="text-gray-300 hover:text-white transition font-medium">
                   Contact
@@ -100,11 +105,18 @@ export default function Home() {
                 <div className="p-6 space-y-4">
                   {/* Navigation Links */}
                   <Link 
-                    href="#capabilities" 
+                    href="/how-it-works" 
                     className="block text-lg text-gray-300 hover:text-white hover:bg-white/5 px-4 py-3 rounded-lg transition-all"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     How It Works
+                  </Link>
+                  <Link 
+                    href="#capabilities" 
+                    className="block text-lg text-gray-300 hover:text-white hover:bg-white/5 px-4 py-3 rounded-lg transition-all"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Features
                   </Link>
                   <Link 
                     href="#cta" 
@@ -308,30 +320,58 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-gray-800 py-12">
+        <footer className="border-t border-gray-800 py-8 md:py-12">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div>
-                <div className="text-xl font-bold mb-2">INNFILL</div>
+            {/* Main Footer Content */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4 mb-8">
+              {/* Logo and Tagline */}
+              <div className="text-center md:text-left">
+                <Link href="/">
+                  <div className="text-xl md:text-2xl font-bold mb-2">
+                    <span className="text-white">INN</span>
+                    <span className="text-blue-500">FILL</span>
+                  </div>
+                </Link>
                 <p className="text-sm text-gray-400">Revolutionizing freelancing with AI</p>
               </div>
-              <div className="flex gap-8 text-sm">
-                <Link href="/how-it-works" className="text-gray-400 hover:text-white transition">
+
+              {/* Navigation Links */}
+              <div className="flex flex-wrap gap-4 md:gap-6 text-sm justify-center md:justify-end w-full md:w-auto">
+                <Link href="/how-it-works" className="text-gray-400 hover:text-white transition whitespace-nowrap">
                   How It Works
                 </Link>
-                <Link href="/contact" className="text-gray-400 hover:text-white transition">
+                <Link href="mailto:support@innfill.in" className="text-gray-400 hover:text-white transition whitespace-nowrap">
                   Contact
                 </Link>
-                <Link href="/terms" className="text-gray-400 hover:text-white transition">
+                <Link href="/terms-of-service" className="text-gray-400 hover:text-white transition whitespace-nowrap">
                   Terms of Service
                 </Link>
-                <Link href="/privacy" className="text-gray-400 hover:text-white transition">
+                <Link href="/privacy-policy" className="text-gray-400 hover:text-white transition whitespace-nowrap">
                   Privacy Policy
                 </Link>
               </div>
             </div>
-            <div className="text-center text-gray-500 text-sm mt-8">
-              INNFILL © 2025
+
+            {/* Contact Information */}
+            <div className="border-t border-gray-800 pt-6 md:pt-8">
+              <div className="text-center space-y-3">
+                <div className="text-gray-500 text-xs md:text-sm">
+                  <p className="font-semibold text-gray-400 mb-2">Innfill © 2025. All rights reserved.</p>
+                </div>
+
+                {/* Address */}
+                <div className="text-gray-500 text-xs md:text-sm max-w-2xl mx-auto leading-relaxed">
+                  <p>9-80/3/A Street No-4 Boddupal Udaya nagar colony,</p>
+                  <p>Hyderabad, Telangana 500092, India</p>
+                </div>
+
+                {/* Email */}
+                <div className="text-gray-500 text-xs md:text-sm">
+                  <p>
+                    Email: <a href="mailto:support@innfill.in" className="text-blue-400 hover:text-blue-300 transition-colors">support@innfill.in</a>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </footer>

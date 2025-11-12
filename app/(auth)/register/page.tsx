@@ -15,6 +15,8 @@ export default function RegisterPage() {
   const [selectedRole, setSelectedRole] = useState<'freelancer' | 'client' | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
 
   const {
     register,
@@ -31,6 +33,11 @@ export default function RegisterPage() {
   }
 
   const onSubmit = async (data: RegisterFormData) => {
+    if (!acceptedTerms || !acceptedPrivacy) {
+      setError('You must accept the Terms of Service and Privacy Policy to continue')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -297,20 +304,44 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="text-xs text-gray-400">
-              By creating an account, you agree to our{' '}
-              <Link href="/terms" className="text-blue-400 hover:text-blue-300 transition-colors">
-                Terms of Service
-              </Link>{' '}
-              and{' '}
-              <Link href="/privacy" className="text-blue-400 hover:text-blue-300 transition-colors">
-                Privacy Policy
-              </Link>
+            {/* Terms and Privacy Policy Checkboxes */}
+            <div className="space-y-3 border-t border-white/10 pt-5">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 text-white focus:ring-2 focus:ring-white/30 cursor-pointer"
+                />
+                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                  I agree to the{' '}
+                  <Link href="/terms-of-service" target="_blank" className="text-blue-400 hover:text-blue-300 underline">
+                    Terms of Service
+                  </Link>
+                  <span className="text-red-400 ml-1">*</span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 text-white focus:ring-2 focus:ring-white/30 cursor-pointer"
+                />
+                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                  I agree to the{' '}
+                  <Link href="/privacy-policy" target="_blank" className="text-blue-400 hover:text-blue-300 underline">
+                    Privacy Policy
+                  </Link>
+                  <span className="text-red-400 ml-1">*</span>
+                </span>
+              </label>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !acceptedTerms || !acceptedPrivacy}
               className="w-full py-3 px-4 bg-white text-black rounded-lg font-semibold hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:shadow-white/20"
             >
               {isLoading ? 'Creating account...' : 'Create Account'}

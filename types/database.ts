@@ -165,18 +165,26 @@ export interface Payment {
   status: PaymentStatus
   // Razorpay fields
   razorpay_payment_id: string | null
+  razorpay_order_id: string | null
   razorpay_transfer_id: string | null
   gateway_fee: number | null
   payment_captured_at: string | null
+  // Refund fields
+  refund_status: 'pending' | 'processed' | 'failed' | null
   refund_id: string | null
   refund_amount: number | null
   refunded_at: string | null
+  razorpay_refund_id: string | null
+  // Total amounts
+  total_amount: number | null
+  gst_amount: number | null
   // Manual payout fields
   transferred_to_freelancer: boolean
   transfer_pending_manual: boolean
   manual_transfer_confirmed: boolean
   manual_transfer_id: string | null
   manual_transfer_date: string | null
+  updated_at: string | null
   created_at: string
 }
 

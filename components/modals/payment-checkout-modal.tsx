@@ -100,11 +100,8 @@ export function PaymentCheckoutModal({
         name: 'INNFILL',
         description: `Payment for ${serviceName}`,
         order_id: razorpayOrderId,
-        prefill: {
-          name: '',
-          email: '',
-          contact: '',
-        },
+        // Don't prefill customer details - let Razorpay handle it
+        // This allows QR code payments to work without email/contact
         notes: {
           order_id: orderId,
           freelancer_name: freelancerName,

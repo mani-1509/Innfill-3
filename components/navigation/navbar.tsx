@@ -56,7 +56,7 @@ export function Navbar() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
-              <Link href="/events">
+              <Link href="/">
                 <div className="text-xl sm:text-2xl font-bold">
                   <span className="text-white">INN</span>
                   <span className="text-blue-500">FILL</span>

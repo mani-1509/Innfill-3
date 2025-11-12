@@ -883,16 +883,40 @@ export async function processRefund(orderId: string, reason: string) {
       return { error: 'No payment found for this order' }
     }
 
+    // Check if payment is not completed (can't refund pending/failed payments)
+    if (payment.status !== 'completed') {
+      return { error: `Cannot refund payment with status: ${payment.status}` }
+    }
+
     // Check if already refunded
-    if (payment.refund_status === 'processed') {
-      return { error: 'Payment already refunded' }
+    if (payment.refund_status === 'processed' || payment.refund_status === 'pending') {
+      console.log('⚠️ Refund already processed or pending for this payment')
+      return { 
+        success: true, 
+        refundAmount: payment.refund_amount || 0,
+        alreadyRefunded: true 
+      }
+    }
+
+    // Check if razorpay_payment_id exists
+    if (!payment.razorpay_payment_id) {
+      return { error: 'No Razorpay payment ID found. Cannot process refund.' }
     }
 
     // Calculate refund amount
-    const totalAmount = payment.amount
-    const platformCommission = order.platform_commission || 0
+    // Refund Formula: Total Paid - GST - 4% Processing Fee
+    // Example: ₹10,252 - ₹252 - ₹400 = ₹9,600
+    const totalAmountWithGST = order.total_amount || payment.amount // Total client paid (with GST)
     const gstAmount = order.gst_amount || 0
-    const refundCalc = calculateRefundAmount(totalAmount, platformCommission, gstAmount)
+    const servicePrice = payment.amount // Service price portion
+    
+    // Calculate 4% processing fee on service price
+    const processingFeePercent = 0.04
+    const processingFee = Math.round(servicePrice * processingFeePercent * 100) / 100
+    
+    // Refund = Total - GST - 4% Fee
+    // Or simplified: Service Price - 4% Fee
+    const refundAmount = Math.round((servicePrice - processingFee) * 100) / 100
 
     // Create Razorpay refund
     console.log('🔄 Initiating refund...')
@@ -906,7 +930,7 @@ export async function processRefund(orderId: string, reason: string) {
 
       // Create refund using Razorpay SDK
       const refund = await razorpay.payments.refund(payment.razorpay_payment_id, {
-        amount: Math.round(refundCalc.refundAmount * 100), // Convert to paise
+        amount: Math.round(refundAmount * 100), // Convert to paise
         notes: {
           order_id: orderId,
           reason: reason,
@@ -914,13 +938,17 @@ export async function processRefund(orderId: string, reason: string) {
       })
 
       console.log('✅ Refund initiated:', refund.id)
+      console.log('   Service Price: ₹' + servicePrice)
+      console.log('   Processing Fee (4%): ₹' + processingFee)
+      console.log('   Refund Amount: ₹' + refundAmount)
+      console.log('   GST (non-refundable): ₹' + gstAmount)
 
       // Update payment with refund details
       const { error: refundError } = await supabase
         .from('payments')
         .update({
           refund_status: 'processed',
-          refund_amount: refundCalc.refundAmount,
+          refund_amount: refundAmount,
           razorpay_refund_id: refund.id,
           updated_at: new Date().toISOString(),
         })
@@ -957,14 +985,12 @@ export async function processRefund(orderId: string, reason: string) {
       revalidatePath(`/orders/${orderId}`)
       revalidatePath('/earnings')
 
-      return {
-        success: true,
-        message: `Refund of ₹${refundCalc.refundAmount.toFixed(2)} processed successfully`,
-        refundId: refund.id,
-        refundAmount: refundCalc.refundAmount,
-      }
-      
-    } catch (refundError: any) {
+    return {
+      success: true,
+      message: `Refund of ₹${refundAmount.toFixed(2)} processed successfully`,
+      refundId: refund.id,
+      refundAmount: refundAmount,
+    }    } catch (refundError: any) {
       console.error('Refund error:', refundError)
       return { 
         error: `Failed to process refund: ${refundError.error?.description || 'Unknown error'}` 
